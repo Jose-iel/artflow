@@ -1,0 +1,96 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: artflow_backend
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+      - /app/dist
+    ports:
+      - "3333:3333"
+    working_dir: /app
+    command: pnpm dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3333
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=artflow
+      - JWT_SECRET=artflow_jwt_secret_key
+      - JWT_EXPIRES_IN=1d
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+      - MAX_FILE_SIZE=10
+      - UPLOAD_DIR=uploads/
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - artflow-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: artflow_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - artflow-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: artflow_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: artflow
+      POSTGRES_INITDB_ARGS: --data-checksums
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d artflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - artflow-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ../pgadmin/servers.json:/pgadmin4/servers.json
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@artflow.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    command: >
+      /bin/sh -c "echo 'artflow_postgres:5432:*:postgres:postgres' > /pgpass &&
+      chmod 600 /pgpass &&
+      /entrypoint.sh"
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - artflow-network
+
+networks:
+  artflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:

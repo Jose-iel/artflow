@@ -1,0 +1,5 @@
+# Raiz - apenas o que não é coberto pelos subprojetos
+node_modules/
+.windsurf/
+.DS_Store
+*.log

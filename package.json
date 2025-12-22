@@ -1,0 +1,14 @@
+{
+  "name": "artflow",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compose:up": "docker compose -f ./docker/docker-compose.yaml up -d --build",
+    "compose:down": "docker compose -f ./docker/docker-compose.yaml -v down",
+    "compose:exec": "docker compose -f ./docker/docker-compose.yaml exec -it art-flow bash",
+    "compose:prune": "docker volume rm docker_pgadmin_data && docker volume rm docker_postgres_data"
+  },
+  "author": "",
+  "license": "ISC"
+}
