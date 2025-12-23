@@ -3,13 +3,14 @@ import { persist } from 'zustand/middleware'
 import { apiPost } from '@/services/api'
 
 // Types
-export type UserRole = 'CLIENT' | 'SUPER_USER'
+export type UserRole = 'CLIENT' | 'FUNCIONARIO' | 'ADMIN_MASTER' | 'SUPER_USER'
 
 export interface User {
   id: string
   nome: string
   email: string
   role: UserRole
+  squadId?: string
   ativo: boolean
   criadoEm: string
   atualizadoEm: string
@@ -26,7 +27,8 @@ export interface RegisterCredentials {
   senha: string
 }
 
-export interface LoginResponse {
+// Response do login de clientes (/auth/login)
+export interface ClienteLoginResponse {
   message: string
   token: string
   cliente: {
@@ -40,6 +42,24 @@ export interface LoginResponse {
   }
 }
 
+// Response do login de usuários (/users/login)
+export interface UserLoginResponse {
+  user: {
+    id: string
+    nome: string
+    email: string
+    role: string
+    squadId?: string
+    ativo: boolean
+    criadoEm: string
+    atualizadoEm: string
+  }
+  token: string
+}
+
+// Tipo legado para compatibilidade
+export type LoginResponse = ClienteLoginResponse
+
 export interface AuthStore {
   user: User | null
   token: string | null
@@ -49,7 +69,7 @@ export interface AuthStore {
   login: (credentials: LoginCredentials) => Promise<void>
   register: (credentials: RegisterCredentials) => Promise<void>
   logout: () => void
-  hasRole: (role: UserRole) => boolean
+  hasRole: (role: UserRole | string) => boolean
   updateUser: (userData: Partial<User>) => void
 }
 
@@ -62,7 +82,36 @@ export const useAuthStore = create<AuthStore>()(
   
   login: async (credentials: LoginCredentials) => {
     try {
-      const response: LoginResponse = await apiPost('/auth/login', credentials)
+      // Tenta primeiro login de usuários (Admin Master, Funcionário)
+      try {
+        console.log('Tentando login em /users/login...')
+        const userResponse: UserLoginResponse = await apiPost('/users/login', credentials)
+        console.log('Login de usuário bem sucedido:', userResponse)
+        
+        const mappedUser: User = {
+          id: userResponse.user.id,
+          nome: userResponse.user.nome,
+          email: userResponse.user.email,
+          role: userResponse.user.role as UserRole,
+          squadId: userResponse.user.squadId,
+          ativo: userResponse.user.ativo,
+          criadoEm: userResponse.user.criadoEm,
+          atualizadoEm: userResponse.user.atualizadoEm
+        }
+        
+        set({
+          user: mappedUser,
+          token: userResponse.token,
+          isAuthenticated: true
+        })
+        return
+      } catch (userLoginError) {
+        // Se falhar, tenta login de clientes
+        console.log('Login de usuário falhou, tentando /auth/login...', userLoginError)
+      }
+
+      // Fallback: login de clientes
+      const response: ClienteLoginResponse = await apiPost('/auth/login', credentials)
       
       // Map backend fields to frontend interface
       const mappedUser: User = {
@@ -132,9 +181,10 @@ export const useAuthStore = create<AuthStore>()(
     localStorage.removeItem('auth-storage')
   },
   
-  hasRole: (role: UserRole) => {
+  hasRole: (role: UserRole | string) => {
     const { user } = get()
-    return user?.role === role
+    // Compara tanto com enum quanto com string
+    return user?.role === role || user?.role === String(role)
   },
   
   updateUser: (userData: Partial<User>) => {

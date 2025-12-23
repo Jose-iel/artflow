@@ -8,6 +8,8 @@ import { CreatePostPage } from '@/components/CreatePostPage'
 import { EditPostPage } from '@/components/EditPostPage'
 import { LoginForm } from '@/components/LoginForm'
 import { RegisterForm } from '@/components/RegisterForm'
+import { AdminMasterPage } from '@/pages/admin'
+import { PostsPage } from '@/pages/PostsPage'
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
           <Route path="/" element={<DashboardRouter />} />
           <Route path="/dashboard" element={<DashboardRouter />} />
           <Route path="/admin/users" element={<UsersManagement />} />
+          <Route path="/admin-master" element={<AdminMasterPage />} />
+          <Route path="/posts" element={<PostsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/posts/create" element={<CreatePostPage />} />
           <Route path="/posts/edit/:id" element={<EditPostPage />} />

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { PostForm, CreatePostData, Client } from '@/components/PostForm'
 import { useAuthStore } from '@/stores/authStore'
 import { apiGet, apiPut } from '@/services/api'
+import { UserRole } from '@/types/auth'
 
 interface Post {
   id: string
@@ -10,17 +11,21 @@ interface Post {
   legenda: string | null
   dataAgendada: string | null
   clienteId: string
+  squadId?: string
   status: string
 }
 
 export const EditPostPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { hasRole } = useAuthStore()
+  const { hasRole, user } = useAuthStore()
   const [post, setPost] = useState<Post | null>(null)
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  const isAdminMaster = hasRole(UserRole.ADMIN_MASTER) || hasRole(UserRole.SUPER_USER)
+  const isFuncionario = hasRole(UserRole.FUNCIONARIO)
 
   // Fetch post data and clients
   useEffect(() => {
@@ -30,16 +35,17 @@ export const EditPostPage: React.FC = () => {
         const postResponse = await apiGet(`/posts/${id}`) as { post: Post }
         setPost(postResponse.post)
 
-        // Fetch clients for admin users
-        if (hasRole('SUPER_USER')) {
+        // Fetch clients for admin/funcionario users
+        if (isAdminMaster) {
           const clientsResponse = await apiGet('/admin/clientes') as { clients: Client[] }
           setClients(clientsResponse.clients || [])
-        } else {
-          setClients([]) // Set empty array for non-admin users
+        } else if (isFuncionario && user?.squadId) {
+          const clientsResponse = await apiGet(`/squads/${user.squadId}/clientes`) as { clientes: Client[] }
+          setClients(clientsResponse.clientes || [])
         }
       } catch (error) {
         console.error('Error fetching post data:', error)
-        navigate('/dashboard')
+        navigate('/posts')
       } finally {
         setLoading(false)
       }
@@ -48,7 +54,7 @@ export const EditPostPage: React.FC = () => {
     if (id) {
       fetchData()
     }
-  }, [id, hasRole, navigate])
+  }, [id, isAdminMaster, isFuncionario, user?.squadId, navigate])
 
   const handleSubmit = async (data: CreatePostData) => {
     if (!id) return
@@ -56,7 +62,7 @@ export const EditPostPage: React.FC = () => {
     setSubmitting(true)
     try {
       await apiPut(`/admin/posts/${id}`, data)
-      navigate('/dashboard')
+      navigate('/posts')
     } catch (error) {
       console.error('Error updating post:', error)
       throw error
@@ -66,7 +72,7 @@ export const EditPostPage: React.FC = () => {
   }
 
   const handleCancel = () => {
-    navigate('/dashboard')
+    navigate('/posts')
   }
 
   if (loading || !post) {
@@ -110,16 +116,13 @@ export const EditPostPage: React.FC = () => {
     clienteId: post.clienteId
   }
 
-  console.log('EditPostPage Debug:')
-  console.log('- Post clienteId:', post.clienteId)
-  console.log('- Clients array:', clients)
-  console.log('- Found client:', clients.find(c => c.id === post.clienteId))
-
   return (
     <PostForm 
       onSubmit={handleSubmit}
       onCancel={handleCancel}
-      isAdmin={hasRole('SUPER_USER')}
+      isAdminMaster={isAdminMaster}
+      isFuncionario={isFuncionario}
+      funcionarioSquadId={user?.squadId}
       clients={clients}
       initialData={initialData}
       isEditing={true}

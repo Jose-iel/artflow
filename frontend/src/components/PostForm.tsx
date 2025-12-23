@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { apiPost } from '@/services/api'
 
 export interface CreatePostData {
@@ -6,19 +6,36 @@ export interface CreatePostData {
   legenda: string | null
   dataAgendada: string | null
   clienteId?: string
+  squadId?: string
 }
 
 export interface Client {
   id: string
   nome: string
   email: string
+  squadId?: string
+}
+
+export interface Empresa {
+  id: string
+  nome: string
+}
+
+export interface Squad {
+  id: string
+  nome: string
+  empresaId: string
 }
 
 interface PostFormProps {
   onSubmit?: (data: CreatePostData) => Promise<void>
   onCancel?: () => void
-  isAdmin?: boolean
+  isAdminMaster?: boolean
+  isFuncionario?: boolean
+  funcionarioSquadId?: string
   clients?: Client[]
+  empresas?: Empresa[]
+  squads?: Squad[]
   initialData?: CreatePostData
   isEditing?: boolean
   submitting?: boolean
@@ -28,6 +45,8 @@ interface FormErrors {
   imagemUrl?: string
   legenda?: string
   dataAgendada?: string
+  empresaId?: string
+  squadId?: string
   clienteId?: string
   general?: string
 }
@@ -35,20 +54,52 @@ interface FormErrors {
 export const PostForm: React.FC<PostFormProps> = ({
   onSubmit,
   onCancel,
-  isAdmin = false,
+  isAdminMaster = false,
+  isFuncionario = false,
+  funcionarioSquadId,
   clients = [],
+  empresas = [],
+  squads = [],
   initialData,
   isEditing = false,
   submitting = false
 }) => {
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>('')
+  const [selectedSquadId, setSelectedSquadId] = useState<string>(funcionarioSquadId || '')
   const [formData, setFormData] = useState<CreatePostData>({
     imagemUrl: initialData?.imagemUrl || '',
     legenda: initialData?.legenda || '',
     dataAgendada: initialData?.dataAgendada || '',
-    clienteId: initialData?.clienteId || ''
+    clienteId: initialData?.clienteId || '',
+    squadId: funcionarioSquadId || ''
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(submitting)
+
+  const isAdmin = isAdminMaster || isFuncionario
+
+  console.log('PostForm - isAdminMaster:', isAdminMaster)
+  console.log('PostForm - empresas:', empresas)
+  console.log('PostForm - squads:', squads)
+  console.log('PostForm - clients:', clients)
+
+  // Filtra squads pela empresa selecionada (apenas para Admin Master)
+  const filteredSquads = useMemo(() => {
+    if (!isAdminMaster || !selectedEmpresaId) return []
+    return squads.filter(s => s.empresaId === selectedEmpresaId)
+  }, [isAdminMaster, selectedEmpresaId, squads])
+
+  // Filtra clientes pela squad selecionada
+  const filteredClients = useMemo(() => {
+    if (isFuncionario) {
+      // Funcionário já recebe apenas clientes da sua squad
+      return clients
+    }
+    if (isAdminMaster && selectedSquadId) {
+      return clients.filter(c => c.squadId === selectedSquadId)
+    }
+    return []
+  }, [isAdminMaster, isFuncionario, selectedSquadId, clients])
 
   // Update form data when initialData changes (for edit mode)
   useEffect(() => {
@@ -57,10 +108,11 @@ export const PostForm: React.FC<PostFormProps> = ({
         imagemUrl: initialData.imagemUrl || '',
         legenda: initialData.legenda || '',
         dataAgendada: initialData.dataAgendada || '',
-        clienteId: initialData.clienteId || ''
+        clienteId: initialData.clienteId || '',
+        squadId: initialData.squadId || funcionarioSquadId || ''
       })
     }
-  }, [initialData])
+  }, [initialData, funcionarioSquadId])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -71,8 +123,17 @@ export const PostForm: React.FC<PostFormProps> = ({
       newErrors.imagemUrl = 'URL da imagem inválida'
     }
 
+    if (isAdminMaster) {
+      if (!selectedEmpresaId) {
+        newErrors.empresaId = 'Empresa é obrigatória'
+      }
+      if (!selectedSquadId) {
+        newErrors.squadId = 'Squad é obrigatória'
+      }
+    }
+
     if (isAdmin && !formData.clienteId) {
-      newErrors.clienteId = 'Cliente é obrigatório para administradores'
+      newErrors.clienteId = 'Cliente é obrigatório'
     }
 
     if (formData.dataAgendada) {
@@ -97,16 +158,13 @@ export const PostForm: React.FC<PostFormProps> = ({
     
     try {
       // Convert datetime-local to timezone-aware string for Brazil timezone
-      const submissionData = {
+      const submissionData: CreatePostData = {
         imagemUrl: formData.imagemUrl,
         legenda: formData.legenda,
         dataAgendada: formData.dataAgendada ? `${formData.dataAgendada}:00-03:00` : null,
-        ...(isAdmin && { clienteId: formData.clienteId })
+        clienteId: formData.clienteId,
+        squadId: isFuncionario ? funcionarioSquadId : selectedSquadId
       }
-
-      console.log('PostForm submitting data:', submissionData)
-      console.log('Is admin:', isAdmin)
-      console.log('Available clients:', clients)
       
       if (onSubmit) {
         await onSubmit(submissionData)
@@ -155,29 +213,93 @@ export const PostForm: React.FC<PostFormProps> = ({
             {/* Form Section */}
             <div className="space-y-6">
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Client Selection - Admin Only */}
+                {/* Empresa Selection - Admin Master Only */}
+                {isAdminMaster && !isEditing && (
+                  <div>
+                    <label htmlFor="empresa" className="block text-sm font-medium text-gray-700 mb-2">
+                      Empresa *
+                    </label>
+                    <select
+                      id="empresa"
+                      value={selectedEmpresaId}
+                      onChange={(e) => {
+                        setSelectedEmpresaId(e.target.value)
+                        setSelectedSquadId('')
+                        handleInputChange('clienteId', '')
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.empresaId ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Selecione uma empresa</option>
+                      {empresas.map((empresa) => (
+                        <option key={empresa.id} value={empresa.id}>
+                          {empresa.nome}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.empresaId && (
+                      <p className="mt-1 text-sm text-red-600">{errors.empresaId}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Squad Selection - Admin Master Only */}
+                {isAdminMaster && !isEditing && (
+                  <div>
+                    <label htmlFor="squad" className="block text-sm font-medium text-gray-700 mb-2">
+                      Squad *
+                    </label>
+                    <select
+                      id="squad"
+                      value={selectedSquadId}
+                      onChange={(e) => {
+                        setSelectedSquadId(e.target.value)
+                        handleInputChange('clienteId', '')
+                      }}
+                      disabled={!selectedEmpresaId}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                        errors.squadId ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Selecione uma squad</option>
+                      {filteredSquads.map((squad) => (
+                        <option key={squad.id} value={squad.id}>
+                          {squad.nome}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.squadId && (
+                      <p className="mt-1 text-sm text-red-600">{errors.squadId}</p>
+                    )}
+                    {!selectedEmpresaId && (
+                      <p className="mt-1 text-xs text-gray-500">Selecione uma empresa primeiro</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Client Selection - Admin/Funcionario */}
                 {isAdmin && (
                   <div>
                     <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-2">
                       Cliente *
                     </label>
                     {isEditing ? (
-                      // Edit mode: show selected client but disabled
                       <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                         {clients.find(c => c.id === formData.clienteId)?.nome || 'Cliente não encontrado'}
                       </div>
                     ) : (
-                      // Create mode: allow client selection
                       <select
                         id="cliente"
                         value={formData.clienteId || ''}
                         onChange={(e) => handleInputChange('clienteId', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        disabled={isAdminMaster && !selectedSquadId}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
                           errors.clienteId ? 'border-red-500' : 'border-gray-300'
                         }`}
                       >
                         <option value="">Selecione um cliente</option>
-                        {clients.map((client) => (
+                        {filteredClients.map((client) => (
                           <option key={client.id} value={client.id}>
                             {client.nome} ({client.email})
                           </option>
@@ -186,6 +308,9 @@ export const PostForm: React.FC<PostFormProps> = ({
                     )}
                     {errors.clienteId && !isEditing && (
                       <p className="mt-1 text-sm text-red-600">{errors.clienteId}</p>
+                    )}
+                    {isAdminMaster && !selectedSquadId && !isEditing && (
+                      <p className="mt-1 text-xs text-gray-500">Selecione uma squad primeiro</p>
                     )}
                   </div>
                 )}

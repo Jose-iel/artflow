@@ -1,92 +1,51 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-
-
-interface MenuItem {
-  label: string
-  href: string
-  icon?: string
-  requiredRole?: 'SUPER_USER'
-}
+import { UserRole } from '@/types/auth'
+import { Sidebar, SidebarMenuItem } from '@/components/ui'
 
 export const Layout: React.FC = () => {
-  const { user, logout, hasRole } = useAuthStore()
-  const location = useLocation()
+  const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-
-  useEffect(() => {
-    console.log('✅ Layout MOUNTED - Component mounted')
-    return () => {
-      console.log('❌ Layout UNMOUNTED - Component unmounted')
-    }
-  }, [])
-
-  console.log('Layout render - user.nome:', user?.nome)
-  console.log('Layout render - sidebarOpen:', sidebarOpen)
 
   if (!user) {
     return <div>Carregando...</div>
   }
 
-  const getClientMenuItems = (): MenuItem[] => [
-    {
-      label: 'Dashboard',
-      href: '/dashboard',
-      icon: '📊'
-    },
-    {
-      label: 'Perfil',
-      href: '/profile',
-      icon: '👤'
-    }
+  const getClientMenuItems = (): SidebarMenuItem[] => [
+    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { label: 'Perfil', href: '/profile', icon: '👤' }
   ]
 
-  const getAdminMenuItems = (): MenuItem[] => [
-    {
-      label: 'Dashboard',
-      href: '/dashboard',
-      icon: '📊'
-    },
-    {
-      label: 'Criar Post',
-      href: '/posts/create',
-      icon: '➕',
-      requiredRole: 'SUPER_USER'
-    },
-        {
-      label: 'Usuários',
-      href: '/admin/users',
-      icon: '👥',
-      requiredRole: 'SUPER_USER'
-    },
-        {
-      label: 'Relatórios',
-      href: '/admin/reports',
-      icon: '📈',
-      requiredRole: 'SUPER_USER'
-    },
-    {
-      label: 'Configurações',
-      href: '/admin/settings',
-      icon: '⚙️',
-      requiredRole: 'SUPER_USER'
-    },
-    {
-      label: 'Perfil',
-      href: '/profile',
-      icon: '👤'
-    }
+  const getAdminMasterMenuItems = (): SidebarMenuItem[] => [
+    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { label: 'Admin Master', href: '/admin-master', icon: '🏢' },
+    { label: 'Posts', href: '/posts', icon: '📝' },
+    { label: 'Perfil', href: '/profile', icon: '👤' }
   ]
 
-  const menuItems = hasRole('SUPER_USER') 
-    ? getAdminMenuItems().filter(item => !item.requiredRole || hasRole(item.requiredRole))
-    : getClientMenuItems()
+  const getFuncionarioMenuItems = (): SidebarMenuItem[] => [
+    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { label: 'Posts', href: '/posts', icon: '📝' },
+    { label: 'Usuários', href: '/admin/users', icon: '👥' },
+    { label: 'Perfil', href: '/profile', icon: '👤' }
+  ]
 
-  const isActiveRoute = (href: string) => {
-    return location.pathname === href || 
-           (href !== '/dashboard' && location.pathname.startsWith(href))
+  const getMenuItems = (): SidebarMenuItem[] => {
+    const role = user?.role as UserRole
+    
+    if (role === UserRole.ADMIN_MASTER || role === UserRole.SUPER_USER) {
+      return getAdminMasterMenuItems()
+    }
+    
+    if (role === UserRole.FUNCIONARIO) {
+      return getFuncionarioMenuItems()
+    }
+    
+    return getClientMenuItems()
   }
+
+  const menuItems = getMenuItems()
 
   const handleLogout = () => {
     logout()
@@ -94,53 +53,12 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`
-        fixed lg:relative
-        inset-y-0 left-0
-        z-50 lg:z-40
-        w-64
-        transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        bg-gradient-to-b from-blue-900 to-blue-800
-        text-white
-        h-screen
-        overflow-y-auto
-      `}>
-        <div className="p-6">
-          <div className="flex items-center space-x-3 mb-8">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">ArtFlow</h1>
-              <p className="text-blue-200 text-sm">Crie. Gerencie. Inspire.</p>
-            </div>
-          </div>
-
-          <nav className="space-y-2">
-            {menuItems.map((item) => {
-              const active = isActiveRoute(item.href)
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`
-                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200
-                    ${active 
-                      ? 'bg-blue-700 text-white shadow-lg' 
-                      : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                    }
-                  `}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              )
-            })}
-          </nav>
-        </div>
-      </aside>
+      {/* Sidebar Component */}
+      <Sidebar 
+        menuItems={menuItems} 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen">
@@ -159,7 +77,7 @@ export const Layout: React.FC = () => {
                 <span className="sr-only">Menu</span>
               </button>
 
-              {/* Desktop logo (hidden when sidebar is open) */}
+              {/* Desktop logo */}
               <div className="hidden lg:flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold">A</span>
@@ -170,19 +88,17 @@ export const Layout: React.FC = () => {
                 </div>
               </div>
 
-              {/* User Info */}
+              {/* User Info & Logout */}
               <div className="flex items-center space-x-4">
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-gray-900">{user.nome || 'Usuário'}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 
-                <div className="relative">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
-                      {user.nome?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {user.nome?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
                 </div>
 
                 <button
@@ -203,14 +119,6 @@ export const Layout: React.FC = () => {
           </div>
         </main>
       </div>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   )
 }
