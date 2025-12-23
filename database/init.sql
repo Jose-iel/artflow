@@ -138,10 +138,11 @@ BEFORE UPDATE ON posts
 FOR EACH ROW EXECUTE FUNCTION atualiza_data_atualizacao();
 
 -- Função para criar hash de senha (usando bcrypt compatível)
+-- NOTA: As senhas devem ser pré-hasheadas com bcrypt antes de inserir
 CREATE OR REPLACE FUNCTION cria_usuario(
     p_nome TEXT,
     p_email TEXT,
-    p_senha_plana TEXT,
+    p_senha_hash TEXT,  -- Senha já hasheada com bcrypt
     p_role user_role DEFAULT 'CLIENT',
     p_squad_id UUID DEFAULT NULL
 ) RETURNS UUID AS $$
@@ -153,10 +154,9 @@ BEGIN
         RAISE EXCEPTION 'Email já cadastrado';
     END IF;
     
-    -- Insere o novo usuário com senha em texto puro (será hasheada pela aplicação)
-    -- NOTA: Em produção, a senha deve ser hasheada pela aplicação antes de inserir
+    -- Insere o novo usuário com senha já hasheada
     INSERT INTO users (nome, email, senha, role, squad_id)
-    VALUES (p_nome, p_email, p_senha_plana, p_role, p_squad_id)
+    VALUES (p_nome, p_email, p_senha_hash, p_role, p_squad_id)
     RETURNING id INTO v_usuario_id;
     
     RETURN v_usuario_id;
@@ -164,10 +164,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Função para criar cliente (legado)
+-- NOTA: As senhas devem ser pré-hasheadas com bcrypt antes de inserir
 CREATE OR REPLACE FUNCTION cria_cliente(
     p_nome TEXT,
     p_email TEXT,
-    p_senha_plana TEXT,
+    p_senha_hash TEXT,  -- Senha já hasheada com bcrypt
     p_squad_id UUID
 ) RETURNS UUID AS $$
 DECLARE
@@ -178,9 +179,9 @@ BEGIN
         RAISE EXCEPTION 'Email já cadastrado';
     END IF;
     
-    -- Insere o novo cliente com senha em texto puro (será hasheada pela aplicação)
+    -- Insere o novo cliente com senha já hasheada
     INSERT INTO clientes (nome, email, senha, squad_id)
-    VALUES (p_nome, p_email, p_senha_plana, p_squad_id)
+    VALUES (p_nome, p_email, p_senha_hash, p_squad_id)
     RETURNING id INTO v_cliente_id;
     
     RETURN v_cliente_id;
@@ -188,7 +189,10 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Dados iniciais para testes
--- Senha padrão: 'senha123' (deve ser alterada no primeiro login)
+-- Senhas pré-hasheadas com bcrypt (cost=10)
+-- senha123 -> $2b$10$xRZ/RAIulCZgaILqToeIfepmwXJB9Xv6jnads4O2SYMu8dPRRQsmC
+-- func123 -> $2b$10$NwKxYAQQuXiZhbQUsNihQucS/E9kI5S0HiE.meyBsAqiGDGoIXmCK
+-- cliente123 -> $2b$10$A9d2KjVxKyFG9Sxt8ZP.XeMfzHjnxSayBVfDOQ76nGpwtBVM2kmEO
 DO $$
 DECLARE
     v_admin_master_id UUID;
@@ -200,12 +204,16 @@ DECLARE
     v_cliente_a_id UUID;
     v_cliente_b_id UUID;
     v_cliente_c_id UUID;
+    -- Senhas hasheadas com bcrypt
+    v_senha_admin TEXT := '$2b$10$xRZ/RAIulCZgaILqToeIfepmwXJB9Xv6jnads4O2SYMu8dPRRQsmC';
+    v_senha_func TEXT := '$2b$10$NwKxYAQQuXiZhbQUsNihQucS/E9kI5S0HiE.meyBsAqiGDGoIXmCK';
+    v_senha_cliente TEXT := '$2b$10$A9d2KjVxKyFG9Sxt8ZP.XeMfzHjnxSayBVfDOQ76nGpwtBVM2kmEO';
 BEGIN
-    -- Cria Admin Master
+    -- Cria Admin Master (senha: senha123)
     SELECT cria_usuario(
         'Admin Master', 
         'admin@artflow.com', 
-        'senha123',
+        v_senha_admin,
         'ADMIN_MASTER',
         NULL
     ) INTO v_admin_master_id;
@@ -233,11 +241,11 @@ BEGIN
         v_empresa_id
     ) RETURNING id INTO v_squad_design_id;
     
-    -- Cria Funcionários
+    -- Cria Funcionários (senha: func123)
     SELECT cria_usuario(
         'João Funcionário', 
         'joao@artflow.com', 
-        'func123',
+        v_senha_func,
         'FUNCIONARIO',
         v_squad_marketing_id
     ) INTO v_funcionario_joao_id;
@@ -245,30 +253,30 @@ BEGIN
     SELECT cria_usuario(
         'Maria Funcionária', 
         'maria@artflow.com', 
-        'func123',
+        v_senha_func,
         'FUNCIONARIO',
         v_squad_design_id
     ) INTO v_funcionario_maria_id;
     
-    -- Cria Clientes (legado)
+    -- Cria Clientes (legado) (senha: cliente123)
     SELECT cria_cliente(
         'Cliente A', 
         'cliente.a@artflow.com', 
-        'cliente123',
+        v_senha_cliente,
         v_squad_marketing_id
     ) INTO v_cliente_a_id;
     
     SELECT cria_cliente(
         'Cliente B', 
         'cliente.b@artflow.com', 
-        'cliente123',
+        v_senha_cliente,
         v_squad_marketing_id
     ) INTO v_cliente_b_id;
     
     SELECT cria_cliente(
         'Cliente C', 
         'cliente.c@artflow.com', 
-        'cliente123',
+        v_senha_cliente,
         v_squad_design_id
     ) INTO v_cliente_c_id;
     

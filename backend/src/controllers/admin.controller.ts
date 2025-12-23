@@ -607,7 +607,7 @@ export class AdminController {
   async getClients(req: AuthRequest, res: Response) {
     try {
       const clients = await this.clienteRepository.find({
-        select: ['id', 'nome', 'email', 'criadoEm'],
+        select: ['id', 'nome', 'email', 'squadId', 'criadoEm'],
         order: { nome: 'ASC' }
       });
 
