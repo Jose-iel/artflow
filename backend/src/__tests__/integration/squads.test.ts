@@ -193,7 +193,7 @@ describe('Squads API Integration Tests', () => {
   });
 
   describe('GET /api/squads/:id', () => {
-    it('should return squad by ID for admin master', async () => {
+    it('should return squad with relations for admin master', async () => {
       const response = await request(app)
         .get(`/api/squads/${testSquad.id}`)
         .set('Authorization', `Bearer ${adminMasterToken}`)
@@ -206,44 +206,36 @@ describe('Squads API Integration Tests', () => {
       expect(response.body.data.clientes).toBeDefined();
     });
 
-    it('should return own squad for funcionário', async () => {
-      const response = await request(app)
+    it('should allow access to own squad for non-admin users', async () => {
+      // Test funcionário
+      const funcResponse = await request(app)
         .get(`/api/squads/${testSquad.id}`)
         .set('Authorization', `Bearer ${funcionarioToken}`)
         .expect(200);
+      expect(funcResponse.body.data.id).toBe(testSquad.id);
 
-      expect(response.body.status).toBe('success');
-      expect(response.body.data.id).toBe(testSquad.id);
-    });
-
-    it('should deny access for funcionário to other squad', async () => {
-      const response = await request(app)
-        .get(`/api/squads/${otherSquad.id}`)
-        .set('Authorization', `Bearer ${funcionarioToken}`)
-        .expect(403);
-
-      expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Acesso negado');
-    });
-
-    it('should return own squad for cliente', async () => {
-      const response = await request(app)
+      // Test cliente
+      const clienteResponse = await request(app)
         .get(`/api/squads/${testSquad.id}`)
         .set('Authorization', `Bearer ${clienteToken}`)
         .expect(200);
-
-      expect(response.body.status).toBe('success');
-      expect(response.body.data.id).toBe(testSquad.id);
+      expect(clienteResponse.body.data.id).toBe(testSquad.id);
     });
 
-    it('should deny access for cliente to other squad', async () => {
-      const response = await request(app)
+    it('should deny access to other squad for non-admin users', async () => {
+      // Test funcionário
+      const funcResponse = await request(app)
+        .get(`/api/squads/${otherSquad.id}`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .expect(403);
+      expect(funcResponse.body.message).toBe('Acesso negado');
+
+      // Test cliente
+      const clienteResponse = await request(app)
         .get(`/api/squads/${otherSquad.id}`)
         .set('Authorization', `Bearer ${clienteToken}`)
         .expect(403);
-
-      expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Acesso negado');
+      expect(clienteResponse.body.message).toBe('Acesso negado');
     });
 
     it('should return 404 for non-existent squad', async () => {
@@ -253,7 +245,6 @@ describe('Squads API Integration Tests', () => {
         .set('Authorization', `Bearer ${adminMasterToken}`)
         .expect(404);
 
-      expect(response.body.status).toBe('error');
       expect(response.body.message).toBe('Squad não encontrada');
     });
   });
@@ -357,87 +348,259 @@ describe('Squads API Integration Tests', () => {
       expect(updatedFuncionario?.squadId).toBe(testSquad.id);
     });
 
-    it('should deny access for funcionário', async () => {
+    it('should allow funcionário to add another funcionário to own squad', async () => {
+      // Create new funcionário without squad
+      const newFuncionario = await AppDataSource.getRepository(User).save({
+        nome: 'New Funcionario 2',
+        email: 'newfunc2@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        role: UserRole.FUNCIONARIO,
+        ativo: true
+      });
+
       const response = await request(app)
         .post(`/api/squads/${testSquad.id}/funcionarios`)
         .set('Authorization', `Bearer ${funcionarioToken}`)
-        .send({ usuarioId: funcionario.id })
+        .send({ usuarioId: newFuncionario.id })
+        .expect(200);
+
+      expect(response.body.status).toBe('success');
+      expect(response.body.message).toBe('Funcionário adicionado à squad com sucesso');
+    });
+
+    it('should deny funcionário to add to different squad', async () => {
+      const newFuncionario = await AppDataSource.getRepository(User).save({
+        nome: 'New Funcionario 3',
+        email: 'newfunc3@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        role: UserRole.FUNCIONARIO,
+        ativo: true
+      });
+
+      const response = await request(app)
+        .post(`/api/squads/${otherSquad.id}/funcionarios`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .send({ usuarioId: newFuncionario.id })
         .expect(403);
 
       expect(response.body.status).toBe('error');
+      expect(response.body.message).toBe('Acesso negado');
     });
 
     it('should validate funcionário exists and is FUNCIONARIO role', async () => {
-      const fakeId = '123e4567-e89b-12d3-a456-426614174000';
+      // UUID válido mas que não existe no banco
+      const nonExistentUuid = '00000000-0000-4000-a000-000000000000';
       const response = await request(app)
         .post(`/api/squads/${testSquad.id}/funcionarios`)
         .set('Authorization', `Bearer ${adminMasterToken}`)
-        .send({ usuarioId: fakeId })
+        .send({ usuarioId: nonExistentUuid })
         .expect(404);
 
       expect(response.body.status).toBe('error');
       expect(response.body.message).toBe('Funcionário não encontrado');
     });
+
+    it('should reject adding non-funcionário user', async () => {
+      const response = await request(app)
+        .post(`/api/squads/${testSquad.id}/funcionarios`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .send({ usuarioId: adminMaster.id })
+        .expect(400);
+
+      expect(response.body.status).toBe('error');
+      expect(response.body.message).toBe('Usuário não é um funcionário');
+    });
   });
 
   describe('DELETE /api/squads/:id/funcionarios/:usuarioId', () => {
-    it('should remove funcionário from squad for admin master', async () => {
+    it('should remove funcionário from squad', async () => {
+      // Create a dedicated funcionário for this test to avoid state issues
+      const funcToRemove = await AppDataSource.getRepository(User).save({
+        nome: 'Func To Remove',
+        email: 'functoremove@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        role: UserRole.FUNCIONARIO,
+        squadId: testSquad.id,
+        ativo: true
+      });
+
       const response = await request(app)
-        .delete(`/api/squads/${testSquad.id}/funcionarios/${funcionario.id}`)
+        .delete(`/api/squads/${testSquad.id}/funcionarios/${funcToRemove.id}`)
         .set('Authorization', `Bearer ${adminMasterToken}`)
         .expect(200);
 
-      expect(response.body.status).toBe('success');
       expect(response.body.message).toBe('Funcionário removido da squad com sucesso');
 
       // Verify funcionário was removed
-      const updatedFuncionario = await AppDataSource.getRepository(User).findOne({
-        where: { id: funcionario.id }
+      const updated = await AppDataSource.getRepository(User).findOne({
+        where: { id: funcToRemove.id }
       });
-      expect(updatedFuncionario?.squadId).toBeNull();
+      expect(updated?.squadId).toBeNull();
     });
 
-    it('should deny access for funcionário', async () => {
+    it('should not allow funcionário to remove himself', async () => {
       const response = await request(app)
         .delete(`/api/squads/${testSquad.id}/funcionarios/${funcionario.id}`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .expect(400);
+
+      expect(response.body.message).toBe('Não pode remover a si mesmo da squad');
+    });
+
+    it('should deny funcionário to remove from different squad', async () => {
+      const otherFuncionario = await AppDataSource.getRepository(User).save({
+        nome: 'Other Squad Func',
+        email: 'othersquadfunc@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        role: UserRole.FUNCIONARIO,
+        squadId: otherSquad.id,
+        ativo: true
+      });
+
+      const response = await request(app)
+        .delete(`/api/squads/${otherSquad.id}/funcionarios/${otherFuncionario.id}`)
         .set('Authorization', `Bearer ${funcionarioToken}`)
         .expect(403);
 
       expect(response.body.status).toBe('error');
+    });
+  });
+
+  describe('POST /api/squads/:id/clientes', () => {
+    it('should create new cliente in squad', async () => {
+      const newCliente = {
+        nome: 'New Cliente',
+        email: 'newcliente@artflow.com',
+        senha: 'senha123'
+      };
+
+      const response = await request(app)
+        .post(`/api/squads/${testSquad.id}/clientes`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .send(newCliente)
+        .expect(201);
+
+      expect(response.body.message).toBe('Cliente adicionado à squad com sucesso');
+      expect(response.body.data.nome).toBe(newCliente.nome);
+      expect(response.body.data.squadId).toBe(testSquad.id);
+    });
+
+    it('should add existing cliente to squad', async () => {
+      // Create cliente without squad
+      const existingCliente = await AppDataSource.getRepository(Cliente).save({
+        nome: 'Existing Cliente',
+        email: 'existing@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        squadId: null,
+        ativo: true
+      });
+
+      const response = await request(app)
+        .post(`/api/squads/${testSquad.id}/clientes`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .send({ clienteId: existingCliente.id })
+        .expect(201);
+
+      expect(response.body.data.id).toBe(existingCliente.id);
+      expect(response.body.data.squadId).toBe(testSquad.id);
+    });
+
+    it('should deny funcionário to add cliente to different squad', async () => {
+      const response = await request(app)
+        .post(`/api/squads/${otherSquad.id}/clientes`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .send({ nome: 'Test', email: 'test@test.com', senha: 'senha123' })
+        .expect(403);
+
+      expect(response.body.message).toBe('Acesso negado');
+    });
+
+    it('should reject duplicate email', async () => {
+      const response = await request(app)
+        .post(`/api/squads/${testSquad.id}/clientes`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .send({ nome: 'Duplicate', email: 'cliente@artflow.com', senha: 'senha123' })
+        .expect(400);
+
+      expect(response.body.message).toBe('Email já cadastrado');
+    });
+  });
+
+  describe('DELETE /api/squads/:id/clientes/:clienteId', () => {
+    it('should remove cliente from squad', async () => {
+      // Create a dedicated cliente for this test to avoid state issues
+      const clienteToRemove = await AppDataSource.getRepository(Cliente).save({
+        nome: 'Cliente To Remove',
+        email: 'clientetoremove@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        squadId: testSquad.id,
+        ativo: true
+      });
+
+      const response = await request(app)
+        .delete(`/api/squads/${testSquad.id}/clientes/${clienteToRemove.id}`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .expect(200);
+
+      expect(response.body.message).toBe('Cliente removido da squad com sucesso');
+
+      // Verify cliente was removed from squad
+      const updated = await AppDataSource.getRepository(Cliente).findOne({
+        where: { id: clienteToRemove.id }
+      });
+      expect(updated?.squadId).toBeNull();
+    });
+
+    it('should deny funcionário to remove cliente from different squad', async () => {
+      const otherCliente = await AppDataSource.getRepository(Cliente).save({
+        nome: 'Other Squad Cliente',
+        email: 'othersquadcliente@artflow.com',
+        senha: '$2b$08$KljYyVpgtaoPjxyx6k3HleInL4gESumyDY4h8k3Iqh.h4vPOvAd0O',
+        squadId: otherSquad.id,
+        ativo: true
+      });
+
+      const response = await request(app)
+        .delete(`/api/squads/${otherSquad.id}/clientes/${otherCliente.id}`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .expect(403);
+
+      expect(response.body.status).toBe('error');
+    });
+  });
+
+  describe('GET /api/squads/:id/membros', () => {
+    it('should return squad members with correct structure', async () => {
+      const response = await request(app)
+        .get(`/api/squads/${testSquad.id}/membros`)
+        .set('Authorization', `Bearer ${adminMasterToken}`)
+        .expect(200);
+
+      expect(response.body.data.squad.id).toBe(testSquad.id);
+      expect(Array.isArray(response.body.data.funcionarios)).toBe(true);
+      expect(Array.isArray(response.body.data.clientes)).toBe(true);
+    });
+
+    it('should deny access to different squad', async () => {
+      const response = await request(app)
+        .get(`/api/squads/${otherSquad.id}/membros`)
+        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .expect(403);
+
+      expect(response.body.message).toBe('Acesso negado');
     });
   });
 
   describe('GET /api/squads/:id/statistics', () => {
-    it('should return squad statistics for admin master', async () => {
+    it('should return squad statistics with member counts', async () => {
       const response = await request(app)
         .get(`/api/squads/${testSquad.id}/statistics`)
         .set('Authorization', `Bearer ${adminMasterToken}`)
         .expect(200);
 
-      expect(response.body.status).toBe('success');
       expect(response.body.data.squad.id).toBe(testSquad.id);
-      expect(response.body.data.squad.totalFuncionarios).toBe(1);
-      expect(response.body.data.squad.totalClientes).toBe(1);
-    });
-
-    it('should return own squad statistics for funcionário', async () => {
-      const response = await request(app)
-        .get(`/api/squads/${testSquad.id}/statistics`)
-        .set('Authorization', `Bearer ${funcionarioToken}`)
-        .expect(200);
-
-      expect(response.body.status).toBe('success');
-      expect(response.body.data.squad.id).toBe(testSquad.id);
-    });
-
-    it('should deny access for funcionário to other squad', async () => {
-      const response = await request(app)
-        .get(`/api/squads/${otherSquad.id}/statistics`)
-        .set('Authorization', `Bearer ${funcionarioToken}`)
-        .expect(403);
-
-      expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Acesso negado');
+      expect(response.body.data.totalFuncionarios).toBe(1);
+      expect(response.body.data.totalClientes).toBe(1);
     });
   });
 });

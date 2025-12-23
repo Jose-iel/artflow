@@ -231,10 +231,14 @@ describe('Posts API Hierarchical Tests', () => {
 
   describe('POST /api/posts', () => {
     it('should create post for admin master', async () => {
+      // Use dynamic future date to avoid test failures
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 1);
+      
       const newPost = {
         imagemUrl: 'https://example.com/new.jpg',
         legenda: 'New post by admin',
-        dataAgendada: '2025-12-20T10:00:00Z',
+        dataAgendada: futureDate.toISOString(),
         clienteId: cliente.id
       };
 
@@ -251,10 +255,14 @@ describe('Posts API Hierarchical Tests', () => {
     });
 
     it('should create post for funcionário', async () => {
+      // Use dynamic future date to avoid test failures
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 1);
+      
       const newPost = {
         imagemUrl: 'https://example.com/new.jpg',
         legenda: 'New post by funcionario',
-        dataAgendada: '2025-12-20T10:00:00Z',
+        dataAgendada: futureDate.toISOString(),
         clienteId: cliente.id
       };
 
