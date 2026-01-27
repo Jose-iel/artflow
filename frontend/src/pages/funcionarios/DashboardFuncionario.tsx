@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { apiGet } from '@/services/api'
-import { PostStatsChart } from '@/components/PostStatsChart'
+import { PostStatsChart } from '@/features/posts'
 import { Users, FileText, CheckCircle, User, Settings, Clock, ClipboardList, Plus, Send } from 'lucide-react'
 
 interface Squad {

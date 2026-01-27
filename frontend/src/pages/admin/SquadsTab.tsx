@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useSquads, useDeleteSquad } from '@/hooks/useSquads'
 import { useEmpresas } from '@/hooks/useEmpresas'
-import { SquadForm } from './SquadForm'
+import { SquadForm } from '@/features/admin'
 import {
   ConfirmModal,
   SearchInput,

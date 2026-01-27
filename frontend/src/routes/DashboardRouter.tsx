@@ -1,6 +1,6 @@
 import React from 'react'
 import { useAuthStore } from '@/stores/authStore'
-import { Dashboard } from '@/components/Dashboard'
+import { DashboardContent } from '@/features/dashboard'
 import { DashboardFuncionario } from '@/pages/funcionarios'
 
 export const DashboardRouter: React.FC = () => {
@@ -13,5 +13,5 @@ export const DashboardRouter: React.FC = () => {
 
   // Admin Master e Super User usam dashboard do cliente (por enquanto)
   // TODO: Criar dashboard específico para Admin Master se necessário
-  return <Dashboard />
+  return <DashboardContent />
 }

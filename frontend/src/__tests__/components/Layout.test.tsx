@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@/__tests__/test-utils'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/layouts'
 import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { TruncateText } from '@/components/TruncateText'
+import { TruncateText } from '@/components'
 
 interface Post {
   id: string

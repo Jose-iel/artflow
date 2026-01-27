@@ -13,7 +13,7 @@ interface PasswordFormData {
   confirmPassword: string
 }
 
-export const Profile: React.FC = () => {
+export const ProfileForm: React.FC = () => {
   const { user, updateUser } = useAuthStore()
   const [isEditing, setIsEditing] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)

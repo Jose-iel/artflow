@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@/__tests__/test-utils'
-import { PostForm } from '@/components/PostForm'
+import { PostForm } from '@/features/posts'
 import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
 

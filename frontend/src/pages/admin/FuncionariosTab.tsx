@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useFuncionarios, useDeleteFuncionario } from '@/hooks/useFuncionarios'
 import { useSquads } from '@/hooks/useSquads'
-import { FuncionarioForm } from '@/components/funcionarios'
+import { FuncionarioForm } from '@/features/admin'
 import {
   ConfirmModal,
   SearchInput,

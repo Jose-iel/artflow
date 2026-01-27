@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@/__tests__/test-utils'
-import { RegisterForm } from '@/components/RegisterForm'
+import { RegisterForm } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
 

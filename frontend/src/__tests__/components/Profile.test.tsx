@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Profile } from '@/components/Profile'
+import { ProfileForm } from '@/features/profile'
 import { createMockUser, createMockAdmin, render } from '@/__tests__/test-utils'
 import { apiPut } from '@/services/api'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -24,7 +24,7 @@ describe('Profile Component', () => {
   describe('Profile Viewing', () => {
     it('should display user information correctly', () => {
       // Arrange
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -42,7 +42,7 @@ describe('Profile Component', () => {
 
     it('should display admin user information correctly', () => {
       // Arrange
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockAdmin,
           isAuthenticated: true
@@ -57,7 +57,7 @@ describe('Profile Component', () => {
 
     it('should show loading state when user is null', () => {
       // Arrange
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: null,
           isAuthenticated: true
@@ -73,7 +73,7 @@ describe('Profile Component', () => {
     it('should enable edit mode when Editar button is clicked', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -93,7 +93,7 @@ describe('Profile Component', () => {
     it('should disable email field for client role', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -112,7 +112,7 @@ describe('Profile Component', () => {
     it('should keep email field disabled even for admin role', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockAdmin,
           isAuthenticated: true
@@ -137,7 +137,7 @@ describe('Profile Component', () => {
         cliente: updatedUser
       })
 
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true,
@@ -169,7 +169,7 @@ describe('Profile Component', () => {
     it('should validate form fields before submission', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -192,7 +192,7 @@ describe('Profile Component', () => {
     it('should cancel editing and restore original values', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -221,7 +221,7 @@ describe('Profile Component', () => {
       const user = userEvent.setup()
       mockApiPut.mockRejectedValueOnce(new Error('API Error'))
 
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -243,7 +243,7 @@ describe('Profile Component', () => {
     it('should enable password change mode when Alterar Senha button is clicked', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -264,7 +264,7 @@ describe('Profile Component', () => {
     it('should validate password fields before submission', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -283,7 +283,7 @@ describe('Profile Component', () => {
     it('should validate password length', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -310,7 +310,7 @@ describe('Profile Component', () => {
     it('should validate password confirmation', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -341,7 +341,7 @@ describe('Profile Component', () => {
         message: 'Senha alterada com sucesso'
       })
 
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -376,7 +376,7 @@ describe('Profile Component', () => {
     it('should cancel password change and clear fields', async () => {
       // Arrange
       const user = userEvent.setup()
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -401,7 +401,7 @@ describe('Profile Component', () => {
       const user = userEvent.setup()
       mockApiPut.mockRejectedValueOnce(new Error('Senha atual incorreta'))
 
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true
@@ -443,7 +443,7 @@ describe('Profile Component', () => {
       })
 
       // Act
-      render(<Profile />, {
+      render(<ProfileForm />, {
         authStore: {
           user: mockUser,
           isAuthenticated: true

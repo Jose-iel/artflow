@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiGet, apiPatch } from '@/services/api'
-import { PostModal } from '@/components/PostModal'
+import { PostModal } from '@/features/posts'
 
 interface Post {
   id: string
@@ -21,7 +21,7 @@ interface DashboardAction {
   variant?: 'primary' | 'secondary' | 'danger'
 }
 
-export const Dashboard: React.FC = () => {
+export const DashboardContent: React.FC = () => {
   const { user, hasRole } = useAuthStore()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)

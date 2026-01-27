@@ -1,10 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { Layout } from '@/components/Layout'
-import { DashboardRouter } from '@/components/DashboardRouter'
-import { Profile } from '@/components/Profile'
-import { LoginForm } from '@/components/LoginForm'
-import { RegisterForm } from '@/components/RegisterForm'
+import { ProtectedRoute, DashboardRouter } from '@/routes'
+import { Layout } from '@/layouts'
+import { ProfileForm } from '@/features/profile'
+import { LoginForm, RegisterForm } from '@/features/auth'
 import { AdminMasterPage } from '@/pages/admin'
 import { UsersPage } from '@/pages/funcionarios'
 import { PostsPage, CreatePostPage, EditPostPage } from '@/pages/posts'
@@ -28,7 +26,7 @@ function App() {
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin-master" element={<AdminMasterPage />} />
           <Route path="/posts" element={<PostsPage />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<ProfileForm />} />
           <Route path="/posts/create" element={<CreatePostPage />} />
           <Route path="/posts/edit/:id" element={<EditPostPage />} />
           <Route 

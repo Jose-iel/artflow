@@ -1,5 +1,5 @@
 import { render, screen } from '@/__tests__/test-utils'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ProtectedRoute } from '@/routes'
 import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
 import { Navigate } from 'react-router-dom'

@@ -1,7 +1,7 @@
 // Tab de Gerenciamento de Empresas
 import React, { useState } from 'react'
 import { useEmpresas, useDeleteEmpresa } from '@/hooks/useEmpresas'
-import { EmpresaForm } from './EmpresaForm'
+import { EmpresaForm } from '@/features/admin'
 import {
   ConfirmModal,
   SearchInput,

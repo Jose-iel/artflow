@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { PostForm, CreatePostData, Client, Empresa, Squad } from '@/components/PostForm'
+import { PostForm, CreatePostData, Client, Empresa, Squad } from '@/features/posts'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { apiPost, apiGet } from '@/services/api'

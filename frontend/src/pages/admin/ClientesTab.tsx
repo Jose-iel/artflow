@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes'
 import { useSquads } from '@/hooks/useSquads'
-import { ClienteForm } from './ClienteForm'
+import { ClienteForm } from '@/features/admin'
 import {
   ConfirmModal,
   SearchInput,

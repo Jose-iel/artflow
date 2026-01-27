@@ -1,5 +1,5 @@
 import { render, screen } from '@/__tests__/test-utils'
-import { Dashboard } from '@/components/Dashboard'
+import { DashboardContent } from '@/features/dashboard'
 import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
 
@@ -35,7 +35,7 @@ describe('Dashboard Component', () => {
 
     it('should render client dashboard with welcome message', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/bem-vindo, test client/i)).toBeInTheDocument()
@@ -44,7 +44,7 @@ describe('Dashboard Component', () => {
 
     it('should display client-specific actions', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert - Client dashboard shows posts section
       expect(screen.getByText(/seus posts/i)).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('Dashboard Component', () => {
 
     it('should display client dashboard title', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/Painel do Cliente/i)).toBeInTheDocument()
@@ -61,7 +61,7 @@ describe('Dashboard Component', () => {
 
     it('should show client posts section', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/seus posts/i)).toBeInTheDocument()
@@ -92,7 +92,7 @@ describe('Dashboard Component', () => {
 
     it('should render admin dashboard with welcome message', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/bem-vindo, test admin/i)).toBeInTheDocument()
@@ -101,7 +101,7 @@ describe('Dashboard Component', () => {
 
     it('should display admin dashboard title', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/Painel Administrativo/i)).toBeInTheDocument()
@@ -131,7 +131,7 @@ describe('Dashboard Component', () => {
 
     it('should display user information', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/test user/i)).toBeInTheDocument()
@@ -139,7 +139,7 @@ describe('Dashboard Component', () => {
 
     it('should display welcome message', () => {
       // Arrange & Act
-      render(<Dashboard />)
+      render(<DashboardContent />)
 
       // Assert
       expect(screen.getByText(/bem-vindo, test user/i)).toBeInTheDocument()
