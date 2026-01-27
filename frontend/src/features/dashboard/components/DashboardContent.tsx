@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { apiGet, apiPatch } from '@/services/api'
 import { PostModal } from '@/features/posts'
+import { getPreviewUrl } from '@/utils/googleDriveUtils'
 
 interface Post {
   id: string
@@ -216,14 +217,32 @@ export const DashboardContent: React.FC = () => {
                     onClick={() => handlePostClick(post)}
                   >
                     <div className="bg-gray-200">
-                      <img 
-                        src={post.imagemUrl} 
-                        alt={post.legenda || 'Post image'}
-                        className="w-full h-40 sm:h-48 object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagem+não+disponível'
-                        }}
-                      />
+                      {(() => {
+                        const preview = getPreviewUrl(post.imagemUrl)
+                        
+                        // Para vídeos, mostrar ícone de play sobre fundo escuro
+                        if (preview.isVideo) {
+                          return (
+                            <div className="w-full h-40 sm:h-48 flex items-center justify-center bg-gray-800 text-white">
+                              <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                            </div>
+                          )
+                        }
+                        
+                        // Para imagens, usar thumbnail otimizado
+                        return (
+                          <img 
+                            src={preview.url} 
+                            alt={post.legenda || 'Post image'}
+                            className="w-full h-40 sm:h-48 object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagem+não+disponível'
+                            }}
+                          />
+                        )
+                      })()}
                     </div>
                     <div className="p-3 sm:p-4">
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-2">

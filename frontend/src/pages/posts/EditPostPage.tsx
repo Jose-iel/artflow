@@ -131,7 +131,8 @@ export const EditPostPage: React.FC = () => {
     imagemUrl: post.imagemUrl,
     legenda: post.legenda,
     dataAgendada: post.dataAgendada ? convertToDateTimeLocal(post.dataAgendada) : '',
-    clienteId: post.clienteId
+    clienteId: post.clienteId,
+    status: post.status
   }
 
   return (

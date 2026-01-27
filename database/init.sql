@@ -92,10 +92,7 @@ CREATE TABLE IF NOT EXISTS posts (
     comentario_cliente TEXT,
     comentario_admin TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    -- Garante que a data agendada seja futura (apenas para novos posts)
-    CONSTRAINT chk_data_agendada_valida 
-        CHECK (data_agendada IS NULL OR data_agendada >= CURRENT_TIMESTAMP)
+    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices para posts

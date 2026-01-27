@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon, CheckCircleIcon, XCircleIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { getPreviewUrl } from '@/utils/googleDriveUtils'
 
 interface PostModalProps {
   post: {
@@ -139,14 +140,49 @@ export const PostModal: React.FC<PostModalProps> = ({
                   
                   {/* Mobile Post Image */}
                   <div className="bg-black">
-                    <img 
-                      src={post.imagemUrl} 
-                      alt="Post"
-                      className="w-full h-64 object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Imagem+não+disponível'
-                      }}
-                    />
+                    {(() => {
+                      const preview = getPreviewUrl(post.imagemUrl)
+                      
+                      // Para vídeos do Google Drive, usar iframe
+                      if (preview.isDriveFile && preview.useIframe) {
+                        return (
+                          <iframe
+                            src={preview.url}
+                            width="100%"
+                            height="256"
+                            frameBorder="0"
+                            allow="autoplay; encrypted-media"
+                            allowFullScreen
+                            title="Preview"
+                            className="w-full h-64"
+                          />
+                        )
+                      }
+                      
+                      // Para imagens do Google Drive ou URLs diretas de imagem
+                      if (!preview.isVideo) {
+                        return (
+                          <img 
+                            src={preview.url} 
+                            alt="Post"
+                            className="w-full h-64 object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Imagem+não+disponível'
+                            }}
+                          />
+                        )
+                      }
+                      
+                      // Para URLs diretas de vídeo (não Drive)
+                      return (
+                        <video 
+                          src={preview.url}
+                          className="w-full h-64 object-cover"
+                          controls
+                          muted
+                        />
+                      )
+                    })()}
                   </div>
                   
                   {/* Mobile Post Actions */}
@@ -327,14 +363,49 @@ export const PostModal: React.FC<PostModalProps> = ({
                   <div className="flex-1 overflow-y-auto">
                     {/* Post Image */}
                     <div className="bg-black">
-                      <img 
-                        src={post.imagemUrl} 
-                        alt="Post"
-                        className="w-full h-[300px] object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/300x300?text=Imagem+não+disponível'
-                        }}
-                      />
+                      {(() => {
+                        const preview = getPreviewUrl(post.imagemUrl)
+                        
+                        // Para vídeos do Google Drive, usar iframe
+                        if (preview.isDriveFile && preview.useIframe) {
+                          return (
+                            <iframe
+                              src={preview.url}
+                              width="100%"
+                              height="300"
+                              frameBorder="0"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                              title="Preview"
+                              className="w-full h-[300px]"
+                            />
+                          )
+                        }
+                        
+                        // Para imagens do Google Drive ou URLs diretas de imagem
+                        if (!preview.isVideo) {
+                          return (
+                            <img 
+                              src={preview.url} 
+                              alt="Post"
+                              className="w-full h-[300px] object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/300x300?text=Imagem+não+disponível'
+                              }}
+                            />
+                          )
+                        }
+                        
+                        // Para URLs diretas de vídeo (não Drive)
+                        return (
+                          <video 
+                            src={preview.url}
+                            className="w-full h-[300px] object-cover"
+                            controls
+                            muted
+                          />
+                        )
+                      })()}
                     </div>
                     
                     {/* Post Actions */}

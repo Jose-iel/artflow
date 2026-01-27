@@ -26,6 +26,7 @@ interface UpdatePostDto {
   imagemUrl?: string;
   legenda?: string;
   dataAgendada?: Date;
+  status?: PostStatus;
 }
 
 interface UpdatePostStatusDto {
@@ -63,10 +64,12 @@ export class AdminController {
       console.log('Raw stats from database:', stats);
 
       // Transform the data for easier consumption
-      // Apenas os 3 status usados no sistema
+      // Todos os status possíveis do sistema
       const formattedStats = {
         'Aprovado': 0,
         'Não aprovado': 0,
+        'Alteração': 0,
+        'Agendado': 0,
         'Publicado': 0
       };
 
@@ -431,6 +434,8 @@ export class AdminController {
         .createQueryBuilder('post')
         .leftJoinAndSelect('post.cliente', 'cliente')
         .leftJoinAndSelect('post.createdBy', 'createdBy')
+        .leftJoinAndSelect('post.squad', 'squad')
+        .leftJoinAndSelect('squad.empresa', 'empresa')
         .orderBy('post.criadoEm', 'DESC');
 
       // Funcionário só vê posts da sua squad
@@ -467,15 +472,6 @@ export class AdminController {
       queryBuilder.skip(offset).take(limitNum);
 
       const [posts, total] = await queryBuilder.getManyAndCount();
-
-      // Atualiza automaticamente posts aprovados com data agendada no passado para Publicado
-      const now = new Date();
-      for (const post of posts) {
-        if (post.status === PostStatus.APROVADO && post.dataAgendada && new Date(post.dataAgendada) < now) {
-          post.status = PostStatus.PUBLICADO;
-          await this.postRepository.save(post);
-        }
-      }
 
       // Calculate pagination metadata
       const totalPages = Math.ceil(total / limitNum);
@@ -539,7 +535,7 @@ export class AdminController {
   async updatePost(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { imagemUrl, legenda, dataAgendada }: UpdatePostDto = req.body;
+      const { imagemUrl, legenda, dataAgendada, status }: UpdatePostDto = req.body;
 
       const post = await this.postRepository.findOne({
         where: { id },
@@ -578,6 +574,18 @@ export class AdminController {
         }
         // Convert datetime-local string to proper Date object with Brazil timezone
         post.dataAgendada = dataAgendada ? new Date(dataAgendada) : null;
+      }
+
+      if (status !== undefined) {
+        // Validate status
+        const validStatuses = Object.values(PostStatus);
+        if (!validStatuses.includes(status)) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Status inválido'
+          });
+        }
+        post.status = status;
       }
 
       const updatedPost = await this.postRepository.save(post);
