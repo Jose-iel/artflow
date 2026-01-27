@@ -10,7 +10,7 @@
     "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js",
     "migration:run": "npm run typeorm migration:run -- -d src/config/data-source.ts",
     "migration:generate": "npm run typeorm migration:generate -- -n",
-    "test": "jest --detectOpenHandles",
+    "test": "jest --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",

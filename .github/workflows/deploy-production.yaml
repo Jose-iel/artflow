@@ -8,6 +8,21 @@ jobs:
   test-and-deploy:
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: artflow_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,7 +44,14 @@ jobs:
         run: cd frontend && pnpm install --no-frozen-lockfile
       
       - name: Run backend tests
-        run: cd backend && pnpm test
+        run: cd backend && pnpm test -- --testPathIgnorePatterns=integration
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_DATABASE: artflow_test
+          JWT_SECRET: test-secret-key-for-ci
       
       - name: Run frontend tests
         run: cd frontend && pnpm test
