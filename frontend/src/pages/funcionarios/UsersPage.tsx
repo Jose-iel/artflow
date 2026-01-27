@@ -1,8 +1,9 @@
 // Página de Gerenciamento de Usuários (Clientes e Funcionários)
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { apiGet, apiPost, apiPatch, apiDelete, apiPut } from '@/services/api'
 import { UserRole } from '@/types/auth'
 import { User, UserPlus, Briefcase, Trash2, Edit, ToggleLeft, ToggleRight } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 
 // Interface para Clientes (tabela clientes)
 interface ClienteData {
@@ -39,7 +40,8 @@ interface Squad {
 type ActiveTab = 'clientes' | 'funcionarios'
 
 export const UsersPage: React.FC = () => {
-  const [clientes, setClientes] = useState<ClienteData[]>([])
+  const { user } = useAuthStore()
+  const [allClientes, setAllClientes] = useState<ClienteData[]>([])
   const [funcionarios, setFuncionarios] = useState<FuncionarioData[]>([])
   const [squads, setSquads] = useState<Squad[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,11 +58,21 @@ export const UsersPage: React.FC = () => {
     squadId: ''
   })
 
+  const isFuncionario = user?.role === UserRole.FUNCIONARIO
+
+  // Filtrar clientes baseado no role do usuário
+  const clientes = useMemo(() => {
+    if (isFuncionario && user?.squadId) {
+      return allClientes.filter(cliente => cliente.squadId === user.squadId)
+    }
+    return allClientes
+  }, [allClientes, isFuncionario, user?.squadId])
+
   const fetchClientes = async () => {
     try {
       const response = await apiGet('/admin/users')
       const clientesResponse = response as { usuarios: ClienteData[] }
-      setClientes(clientesResponse.usuarios || [])
+      setAllClientes(clientesResponse.usuarios || [])
     } catch (err) {
       console.error('Error fetching clientes:', err)
     }
@@ -80,9 +92,9 @@ export const UsersPage: React.FC = () => {
 
   const fetchSquads = async () => {
     try {
-      const response = await apiGet('/admin/squads')
-      const squadsResponse = response as { squads: Squad[] }
-      setSquads(squadsResponse.squads || [])
+      const response = await apiGet('/squads')
+      const squadsResponse = response as { data: Squad[] }
+      setSquads(squadsResponse.data || [])
     } catch (err) {
       console.error('Error fetching squads:', err)
     }
@@ -105,7 +117,8 @@ export const UsersPage: React.FC = () => {
       await apiPost('/admin/users/create', {
         nome: formData.nome,
         email: formData.email,
-        senha: formData.senha
+        senha: formData.senha,
+        squadId: isFuncionario ? user?.squadId : formData.squadId
       })
       setShowCreateModal(false)
       resetForm()
@@ -163,7 +176,7 @@ export const UsersPage: React.FC = () => {
         email: formData.email,
         senha: formData.senha,
         role: UserRole.FUNCIONARIO,
-        squadId: formData.squadId || null
+        squadId: isFuncionario ? user?.squadId : (formData.squadId || null)
       })
       setShowCreateModal(false)
       resetForm()
@@ -318,13 +331,15 @@ export const UsersPage: React.FC = () => {
             ? 'Gerenciando todos os clientes' 
             : 'Gerenciando todos os funcionários'}
         </div>
-        <button
-          onClick={openCreateModal}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Novo {activeTab === 'clientes' ? 'Cliente' : 'Funcionário'}
-        </button>
+        {(activeTab === 'clientes' || !isFuncionario) && (
+          <button
+            onClick={openCreateModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Novo {activeTab === 'clientes' ? 'Cliente' : 'Funcionário'}
+          </button>
+        )}
       </div>
 
       {/* Users Table */}
@@ -432,32 +447,34 @@ export const UsersPage: React.FC = () => {
                     {new Date(funcionario.criadoEm).toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => openEditFuncionarioModal(funcionario)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleFuncionarioStatus(funcionario)
-                        }}
-                        className={funcionario.ativo ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}
-                        title={funcionario.ativo ? 'Desativar' : 'Ativar'}
-                      >
-                        {funcionario.ativo ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                      </button>
-                      <button
-                        onClick={() => openDeleteFuncionarioModal(funcionario)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Excluir"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {!isFuncionario && (
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => openEditFuncionarioModal(funcionario)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleFuncionarioStatus(funcionario)
+                          }}
+                          className={funcionario.ativo ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}
+                          title={funcionario.ativo ? 'Desativar' : 'Ativar'}
+                        >
+                          {funcionario.ativo ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                        </button>
+                        <button
+                          onClick={() => openDeleteFuncionarioModal(funcionario)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -512,7 +529,7 @@ export const UsersPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              {activeTab === 'funcionarios' && (
+              {activeTab === 'funcionarios' && !isFuncionario && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Squad</label>
                   <select
@@ -568,7 +585,7 @@ export const UsersPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              {activeTab === 'funcionarios' && (
+              {activeTab === 'funcionarios' && !isFuncionario && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Squad</label>
                   <select
