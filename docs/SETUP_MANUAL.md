@@ -9,7 +9,7 @@
 ## ✅ Checklist Geral
 
 - [ ] 1. Provisionar VPS
-- [ ] 2. Configurar DNS (3 subdomínios)
+- [ ] 2. Configurar DNS (4 subdomínios)
 - [ ] 3. Setup inicial da VPS
 - [ ] 4. Configurar SSL (Let's Encrypt)
 - [ ] 5. Configurar secrets no GitHub
@@ -64,12 +64,18 @@ Tipo: A
 Nome: grafana-artflow
 Valor: SEU_IP_VPS
 TTL: 3600
+
+Tipo: A
+Nome: db-artflow
+Valor: SEU_IP_VPS
+TTL: 3600
 ```
 
 ### **Resultado Esperado**
 - `artflow.iel-company.com.br` → IP da VPS (Frontend)
 - `backend-artflow.iel-company.com.br` → IP da VPS (API)
 - `grafana-artflow.iel-company.com.br` → IP da VPS (Monitoramento)
+- `db-artflow.iel-company.com.br` → IP da VPS (Admin Database)
 
 ### **Validar DNS (aguardar propagação 5-30 min)**
 ```bash
@@ -77,6 +83,7 @@ TTL: 3600
 nslookup artflow.iel-company.com.br
 nslookup backend-artflow.iel-company.com.br
 nslookup grafana-artflow.iel-company.com.br
+nslookup db-artflow.iel-company.com.br
 
 # Todos devem retornar o IP da sua VPS
 ```
@@ -218,6 +225,7 @@ certbot --nginx \
   -d artflow.iel-company.com.br \
   -d backend-artflow.iel-company.com.br \
   -d grafana-artflow.iel-company.com.br \
+  -d db-artflow.iel-company.com.br \
   --non-interactive \
   --agree-tos \
   -m seu-email@exemplo.com
@@ -244,7 +252,15 @@ nano /etc/nginx/sites-available/artflow
 ```
 
 Colar conteúdo (ver arquivo `docker/nginx/artflow.conf` no repositório):
+
+**IMPORTANTE:** Use o arquivo completo `docker/nginx/artflow.conf` que contém configuração para todos os 4 domínios (Frontend, Backend, Grafana, Adminer).
+
+Ou copie manualmente:
+
 ```nginx
+# Rate Limiting (deve estar ANTES dos blocos server)
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/s;
+
 # Frontend
 server {
     listen 80;
@@ -297,6 +313,66 @@ server {
     location /api/health {
         proxy_pass http://localhost:3333/api/health;
         access_log off;
+    }
+}
+
+# Grafana - grafana-artflow.iel-company.com.br
+server {
+    listen 80;
+    server_name grafana-artflow.iel-company.com.br;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name grafana-artflow.iel-company.com.br;
+
+    ssl_certificate /etc/letsencrypt/live/grafana-artflow.iel-company.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/grafana-artflow.iel-company.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Adminer (Database Manager) - db-artflow.iel-company.com.br
+server {
+    listen 80;
+    server_name db-artflow.iel-company.com.br;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name db-artflow.iel-company.com.br;
+
+    ssl_certificate /etc/letsencrypt/live/db-artflow.iel-company.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/db-artflow.iel-company.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Opcional: Adicionar Basic Auth para segurança extra
+    # auth_basic "Restricted Access";
+    # auth_basic_user_file /etc/nginx/.htpasswd;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 }
 ```
@@ -478,7 +554,7 @@ curl https://artflow.iel-company.com.br
 
 ```bash
 # Entrar no container do PostgreSQL
-docker exec -it artflow_postgres psql -U postgres
+docker exec -it artflow_postgres_prod psql -U postgres
 
 # Verificar banco
 \l
@@ -719,6 +795,10 @@ crontab -l | grep backup
 # 7. Grafana acessível
 curl -I https://grafana-artflow.iel-company.com.br
 # ✅ HTTP/2 200
+
+# 8. Adminer acessível
+curl -I https://db-artflow.iel-company.com.br
+# ✅ HTTP/2 200
 ```
 
 ### **Testar URLs públicas**
@@ -734,6 +814,10 @@ curl https://backend-artflow.iel-company.com.br/api/health
 
 # Grafana
 curl -I https://grafana-artflow.iel-company.com.br
+# ✅ HTTP/2 200
+
+# Adminer
+curl -I https://db-artflow.iel-company.com.br
 # ✅ HTTP/2 200
 ```
 
@@ -772,18 +856,20 @@ docker compose -f docker/docker-compose.prod.yaml logs --tail 50
 Seu ArtFlow está em produção com:
 
 ✅ Deploy automático (git push → produção)  
-✅ SSL/HTTPS configurado (3 domínios)  
+✅ SSL/HTTPS configurado (4 domínios)  
 ✅ Backup diário automático  
 ✅ Restart automático em falhas  
 ✅ PostgreSQL otimizado (4GB shared_buffers)  
 ✅ Nginx reverse proxy  
 ✅ Grafana + Prometheus (monitoramento completo)  
 ✅ Node Exporter (métricas do sistema)  
+✅ Adminer (admin database web)  
 
 ### **URLs de Acesso:**
 - 🌐 Frontend: https://artflow.iel-company.com.br
 - 🔌 Backend: https://backend-artflow.iel-company.com.br
 - 📊 Grafana: https://grafana-artflow.iel-company.com.br
+- 🗄️ Adminer: https://db-artflow.iel-company.com.br
 
 ---
 
