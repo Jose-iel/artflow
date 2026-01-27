@@ -24,14 +24,24 @@ export const clearTestDb = async (): Promise<void> => {
     return;
   }
 
-  // Delete in reverse dependency order to avoid foreign key constraints
-  const entities = [Post, User, Cliente, Squad, Empresa];
+  const queryRunner = AppDataSource.createQueryRunner();
   
-  for (const entity of entities) {
-    await AppDataSource.createQueryBuilder()
-      .delete()
-      .from(entity)
-      .execute();
+  try {
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    await queryRunner.query('TRUNCATE TABLE posts RESTART IDENTITY CASCADE');
+    await queryRunner.query('TRUNCATE TABLE clientes RESTART IDENTITY CASCADE');
+    await queryRunner.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+    await queryRunner.query('TRUNCATE TABLE squads RESTART IDENTITY CASCADE');
+    await queryRunner.query('TRUNCATE TABLE empresas RESTART IDENTITY CASCADE');
+
+    await queryRunner.commitTransaction();
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    throw error;
+  } finally {
+    await queryRunner.release();
   }
 };
 

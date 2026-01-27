@@ -1,59 +1,46 @@
 import { render, screen, fireEvent, waitFor } from '@/__tests__/test-utils'
 import { PostForm } from '@/features/posts'
-import { useAuthStore } from '@/stores/authStore'
 import { vi } from 'vitest'
-
-// Mock the auth store
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn()
-}))
-
-const mockUseAuthStore = vi.mocked(useAuthStore)
+import userEvent from '@testing-library/user-event'
 
 describe('PostForm Component', () => {
-  const mockUser = {
-    id: 'test-user-id',
-    nome: 'Test User',
-    email: 'test@example.com',
-    role: 'CLIENT' as const,
-    ativo: true,
-    criadoEm: '2023-12-09T12:00:00.000Z',
-    atualizadoEm: '2023-12-09T12:00:00.000Z'
-  }
+  const mockClients = [
+    { id: 'client-1', nome: 'Client 1', email: 'client1@test.com', squadId: 'squad-1' },
+    { id: 'client-2', nome: 'Client 2', email: 'client2@test.com', squadId: 'squad-1' }
+  ]
+
+  const mockEmpresas = [
+    { id: 'empresa-1', nome: 'Empresa 1' },
+    { id: 'empresa-2', nome: 'Empresa 2' }
+  ]
+
+  const mockSquads = [
+    { id: 'squad-1', nome: 'Squad 1', empresaId: 'empresa-1' },
+    { id: 'squad-2', nome: 'Squad 2', empresaId: 'empresa-1' }
+  ]
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseAuthStore.mockReturnValue({
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-      user: mockUser,
-      token: 'test-token',
-      isAuthenticated: true,
-      hasRole: vi.fn((role) => role === 'CLIENT')
-    })
   })
 
-  describe('Create Mode', () => {
-    it('should render post creation form with all fields', () => {
-      // Arrange & Act
-      render(<PostForm isAdmin={true} clients={[]} />)
+  describe('Create Mode - Funcionario', () => {
+    it('should render post creation form with all fields for funcionario', () => {
+      render(<PostForm isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} />)
 
-      // Assert
-      expect(screen.getByLabelText(/url da imagem/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cliente/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/url da mídia/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/legenda do post/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/data de agendamento/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/status do post/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /criar post/i })).toBeInTheDocument()
-      expect(screen.getByText(/criar novo post/i)).toBeInTheDocument()
     })
 
-    it('should have submit button enabled when form is ready', () => {
-      // Arrange & Act
-      render(<PostForm isAdmin={true} clients={[]} />)
+    it('should render empresa and squad selects for admin master', () => {
+      render(<PostForm isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} />)
 
-      // Assert
-      const submitButton = screen.getByRole('button', { name: /criar post/i })
-      expect(submitButton).toBeInTheDocument()
+      expect(screen.getByLabelText(/empresa/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/squad/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cliente/i)).toBeInTheDocument()
     })
   })
 
@@ -62,14 +49,14 @@ describe('PostForm Component', () => {
       imagemUrl: 'https://example.com/test.jpg',
       legenda: 'Post de Teste',
       dataAgendada: '2024-01-01T10:00',
-      clienteId: 'test-client-id'
+      clienteId: 'client-1',
+      squadId: 'squad-1',
+      status: 'Aprovado'
     }
 
     it('should render edit form with existing post data', () => {
-      // Arrange & Act
-      render(<PostForm initialData={mockPost} isAdmin={true} clients={[]} isEditing={true} />)
+      render(<PostForm initialData={mockPost} isFuncionario={true} clients={mockClients} isEditing={true} />)
 
-      // Assert
       expect(screen.getByDisplayValue('https://example.com/test.jpg')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Post de Teste')).toBeInTheDocument()
       expect(screen.getByDisplayValue('2024-01-01T10:00')).toBeInTheDocument()
@@ -78,177 +65,197 @@ describe('PostForm Component', () => {
     })
 
     it('should pre-fill form fields with post data', () => {
-      // Arrange & Act
-      render(<PostForm initialData={mockPost} isAdmin={true} clients={[]} isEditing={true} />)
+      render(<PostForm initialData={mockPost} isFuncionario={true} clients={mockClients} isEditing={true} />)
 
-      // Assert
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-      const contentInput = screen.getByLabelText(/legenda do post/i)
-      const descriptionInput = screen.getByLabelText(/data de agendamento/i)
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      const legendaInput = screen.getByLabelText(/legenda do post/i)
+      const dataInput = screen.getByLabelText(/data de agendamento/i)
 
-      expect(titleInput).toHaveValue('https://example.com/test.jpg')
-      expect(contentInput).toHaveValue('Post de Teste')
-      expect(descriptionInput).toHaveValue('2024-01-01T10:00')
+      expect(imageInput).toHaveValue('https://example.com/test.jpg')
+      expect(legendaInput).toHaveValue('Post de Teste')
+      expect(dataInput).toHaveValue('2024-01-01T10:00')
+    })
+
+    it('should show client name as disabled field in edit mode', () => {
+      render(<PostForm initialData={mockPost} isFuncionario={true} clients={mockClients} isEditing={true} />)
+
+      expect(screen.getByText('Client 1')).toBeInTheDocument()
     })
   })
 
   describe('Form Validation', () => {
-    it('should enable submit button when required fields are filled', async () => {
-      // Arrange
-      render(<PostForm isAdmin={true} clients={[]} />)
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-      const contentInput = screen.getByLabelText(/legenda do post/i)
-      const submitButton = screen.getByRole('button', { name: /criar post/i })
-
-      // Act
-      fireEvent.change(titleInput, { target: { value: 'Título de Teste' } })
-      fireEvent.change(contentInput, { target: { value: 'Conteúdo de teste' } })
-
-      // Assert
-      expect(submitButton).not.toBeDisabled()
-    })
-
-    it('should require valid URL format', () => {
-      // Arrange
-      const mockClients = [{ id: 'client-1', nome: 'Test Client', email: 'test@test.com' }]
-      render(<PostForm isAdmin={true} clients={mockClients} />)
+    it('should show validation error for missing URL', async () => {
+      const mockSubmit = vi.fn()
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
       
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-
-      // Act & Assert - Input should accept URL
-      fireEvent.change(titleInput, { target: { value: 'https://example.com/image.jpg' } })
-      expect(titleInput).toHaveValue('https://example.com/image.jpg')
-    })
-
-    it('should show client validation error when admin', async () => {
-      // Arrange
-      render(<PostForm isAdmin={true} clients={[]} />)
-      
-      // Act - Try to submit without selecting client
       const submitButton = screen.getByRole('button', { name: /criar post/i })
       fireEvent.click(submitButton)
 
-      // Assert
       await waitFor(() => {
-        expect(screen.getByText(/cliente é obrigatório para administradores/i)).toBeInTheDocument()
+        expect(screen.getByText(/url da imagem é obrigatória/i)).toBeInTheDocument()
+      })
+      expect(mockSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should accept valid URL format', async () => {
+      const mockSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
+      
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      const clientSelect = screen.getByLabelText(/cliente/i)
+      
+      fireEvent.change(clientSelect, { target: { value: 'client-1' } })
+      fireEvent.change(imageInput, { target: { value: 'https://example.com/image.jpg' } })
+      
+      expect(imageInput).toHaveValue('https://example.com/image.jpg')
+    })
+
+    it('should show validation error when cliente not selected', async () => {
+      const mockSubmit = vi.fn()
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
+      
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
+      
+      const submitButton = screen.getByRole('button', { name: /criar post/i })
+      fireEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/cliente é obrigatório/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should validate empresa and squad for admin master', async () => {
+      const mockSubmit = vi.fn()
+      render(<PostForm onSubmit={mockSubmit} isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} />)
+      
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
+      
+      const submitButton = screen.getByRole('button', { name: /criar post/i })
+      fireEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/empresa é obrigatória/i)).toBeInTheDocument()
       })
     })
   })
 
   describe('Form Submission', () => {
-    it('should handle form submission', async () => {
-      // Arrange - Mock API call
+    it('should submit form with valid data for funcionario', async () => {
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
-      const mockClients = [{ id: 'client-1', nome: 'Test Client', email: 'test@test.com' }]
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} />)
       
-      render(<PostForm onSubmit={mockSubmit} isAdmin={true} clients={mockClients} />)
       const clientSelect = screen.getByLabelText(/cliente/i)
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-      const contentInput = screen.getByLabelText(/legenda do post/i)
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      const legendaInput = screen.getByLabelText(/legenda do post/i)
       const submitButton = screen.getByRole('button', { name: /criar post/i })
 
-      // Act
       fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(titleInput, { target: { value: 'https://example.com/test.jpg' } })
-      fireEvent.change(contentInput, { target: { value: 'Conteúdo de teste suficientemente longo' } })
+      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
+      fireEvent.change(legendaInput, { target: { value: 'Legenda teste' } })
       fireEvent.click(submitButton)
 
-      // Assert
       await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalled()
+        expect(mockSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            imagemUrl: 'https://example.com/test.jpg',
+            legenda: 'Legenda teste',
+            clienteId: 'client-1',
+            squadId: 'squad-1'
+          })
+        )
       })
     })
 
-    it('should call onSubmit with form data', async () => {
-      // Arrange
+    it('should submit form with empresa and squad for admin master', async () => {
+      const user = userEvent.setup()
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
-      const mockClients = [{ id: 'client-1', nome: 'Test Client', email: 'test@test.com' }]
-      render(<PostForm onSubmit={mockSubmit} isAdmin={true} clients={mockClients} />)
+      render(<PostForm onSubmit={mockSubmit} isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} />)
+      
+      const empresaSelect = screen.getByLabelText(/empresa/i)
+      await user.selectOptions(empresaSelect, 'empresa-1')
+      
+      const squadSelect = screen.getByLabelText(/squad/i)
+      await user.selectOptions(squadSelect, 'squad-1')
       
       const clientSelect = screen.getByLabelText(/cliente/i)
-      const titleInput = screen.getByLabelText(/url da imagem/i)
+      await user.selectOptions(clientSelect, 'client-1')
+      
+      const imageInput = screen.getByLabelText(/url da mídia/i)
+      await user.type(imageInput, 'https://example.com/test.jpg')
+      
       const submitButton = screen.getByRole('button', { name: /criar post/i })
+      await user.click(submitButton)
 
-      // Act
-      fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(titleInput, { target: { value: 'https://example.com/test.jpg' } })
-      fireEvent.click(submitButton)
-
-      // Assert
       await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalled()
-      }, { timeout: 3000 })
-    })
-
-    it('should allow editing form fields in edit mode', () => {
-      // Arrange
-      const mockPost = {
-        imagemUrl: 'https://example.com/original.jpg',
-        legenda: 'Post Original',
-        dataAgendada: '2024-01-01T10:00',
-        clienteId: 'test-client-id'
-      }
-      
-      render(<PostForm initialData={mockPost} isAdmin={true} clients={[]} isEditing={true} />)
-      
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-
-      // Act
-      fireEvent.change(titleInput, { target: { value: 'https://example.com/editado.jpg' } })
-
-      // Assert
-      expect(titleInput).toHaveValue('https://example.com/editado.jpg')
-      expect(screen.getByRole('button', { name: /salvar alterações/i })).toBeInTheDocument()
+        expect(mockSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            imagemUrl: 'https://example.com/test.jpg',
+            clienteId: 'client-1',
+            squadId: 'squad-1'
+          })
+        )
+      })
     })
 
     it('should handle submission errors gracefully', async () => {
-      // Arrange
       const mockSubmit = vi.fn().mockRejectedValue(new Error('Erro ao criar post'))
-      const mockClients = [{ id: 'client-1', nome: 'Test Client', email: 'test@test.com' }]
-      render(<PostForm onSubmit={mockSubmit} isAdmin={true} clients={mockClients} />)
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
       
       const clientSelect = screen.getByLabelText(/cliente/i)
-      const titleInput = screen.getByLabelText(/url da imagem/i)
-      const contentInput = screen.getByLabelText(/legenda do post/i)
+      const imageInput = screen.getByLabelText(/url da mídia/i)
       const submitButton = screen.getByRole('button', { name: /criar post/i })
 
-      // Act
       fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(titleInput, { target: { value: 'https://example.com/test.jpg' } })
-      fireEvent.change(contentInput, { target: { value: 'Conteúdo de teste suficientemente longo' } })
+      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
       fireEvent.click(submitButton)
 
-      // Assert - Just verify the submit was called
       await waitFor(() => {
-        expect(mockSubmit).toHaveBeenCalled()
+        expect(screen.getByText(/erro ao criar post/i)).toBeInTheDocument()
       })
     })
   })
 
   describe('User Actions', () => {
-    it('should show cancel button', () => {
-      // Arrange
+    it('should show cancel button when onCancel provided', () => {
       const mockCancel = vi.fn()
-      
-      // Act
-      render(<PostForm onCancel={mockCancel} />)
+      render(<PostForm onCancel={mockCancel} isFuncionario={true} clients={mockClients} />)
 
-      // Assert
       expect(screen.getByRole('button', { name: /cancelar/i })).toBeInTheDocument()
     })
 
     it('should call onCancel when cancel button is clicked', () => {
-      // Arrange
       const mockCancel = vi.fn()
-      render(<PostForm onCancel={mockCancel} />)
+      render(<PostForm onCancel={mockCancel} isFuncionario={true} clients={mockClients} />)
       
       const cancelButton = screen.getByRole('button', { name: /cancelar/i })
-
-      // Act
       fireEvent.click(cancelButton)
 
-      // Assert
       expect(mockCancel).toHaveBeenCalled()
+    })
+
+    it('should show delete button in edit mode', () => {
+      const mockDelete = vi.fn()
+      const mockPost = {
+        imagemUrl: 'https://example.com/test.jpg',
+        legenda: 'Test',
+        dataAgendada: null,
+        clienteId: 'client-1'
+      }
+      
+      render(<PostForm onDelete={mockDelete} initialData={mockPost} isEditing={true} isFuncionario={true} clients={mockClients} />)
+
+      expect(screen.getByRole('button', { name: /excluir post/i })).toBeInTheDocument()
+    })
+
+    it('should toggle preview mode between post and story', () => {
+      render(<PostForm isFuncionario={true} clients={mockClients} />)
+
+      const storyButton = screen.getByRole('button', { name: /story.*reels/i })
+      fireEvent.click(storyButton)
+
+      expect(storyButton).toHaveClass('bg-white')
     })
   })
 })

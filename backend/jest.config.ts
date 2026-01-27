@@ -21,6 +21,7 @@ const config = {
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
+  maxWorkers: 1,
 };
 
 export default config;

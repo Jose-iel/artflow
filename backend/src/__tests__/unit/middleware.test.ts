@@ -325,4 +325,67 @@ describe('Auth Middleware', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
+
+  describe('authenticateCliente', () => {
+    const { authenticateCliente } = require('../../middlewares/auth');
+
+    it('should authenticate cliente successfully', async () => {
+      mockRequest.headers.authorization = 'Bearer valid-token';
+      const decodedToken = { id: 'cliente-id', email: 'cliente@example.com' };
+      (jwt.verify as jest.Mock).mockReturnValue(decodedToken);
+      
+      const activeCliente = { 
+        id: 'cliente-id', 
+        email: 'cliente@example.com', 
+        ativo: true,
+        squad: { id: 'squad-id', empresa: { id: 'empresa-id' } }
+      };
+      const mockClienteRepository = AppDataSource.getRepository(Cliente);
+      (mockClienteRepository.findOne as jest.Mock).mockResolvedValue(activeCliente);
+
+      await authenticateCliente(mockRequest, mockResponse, mockNext);
+
+      expect(jwt.verify).toHaveBeenCalledWith('valid-token', 'test-secret');
+      expect(mockClienteRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'cliente-id', ativo: true },
+        relations: ['squad', 'squad.empresa']
+      });
+      expect(mockRequest.cliente).toEqual({
+        id: 'cliente-id',
+        email: 'cliente@example.com',
+        squadId: 'squad-id',
+        empresaId: 'empresa-id'
+      });
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should return 401 when cliente not found', async () => {
+      mockRequest.headers.authorization = 'Bearer valid-token';
+      const decodedToken = { id: 'cliente-id', email: 'cliente@example.com' };
+      (jwt.verify as jest.Mock).mockReturnValue(decodedToken);
+      
+      const mockClienteRepository = AppDataSource.getRepository(Cliente);
+      (mockClienteRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await authenticateCliente(mockRequest, mockResponse, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Cliente não encontrado ou inativo'
+      });
+    });
+
+    it('should return 401 when token is missing', async () => {
+      delete mockRequest.headers.authorization;
+
+      await authenticateCliente(mockRequest, mockResponse, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Token de autenticação não fornecido'
+      });
+    });
+  });
 });

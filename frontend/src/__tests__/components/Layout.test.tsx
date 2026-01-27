@@ -109,7 +109,7 @@ describe('Layout Component', () => {
     })
   })
 
-  describe('Admin Sidebar Navigation', () => {
+  describe('Admin Master Sidebar Navigation', () => {
     beforeEach(() => {
       mockUseAuthStore.mockReturnValue({
         login: vi.fn(),
@@ -119,26 +119,54 @@ describe('Layout Component', () => {
           id: 'test-admin-id',
           nome: 'Test Admin',
           email: 'admin@example.com',
-          role: 'SUPER_USER',
+          role: 'ADMIN_MASTER',
           ativo: true,
           criadoEm: '2023-12-09T12:00:00.000Z',
           atualizadoEm: '2023-12-09T12:00:00.000Z'
         },
         token: 'test-token',
         isAuthenticated: true,
-        hasRole: vi.fn((role) => role === 'SUPER_USER')
+        hasRole: vi.fn((role) => role === 'ADMIN_MASTER')
       })
     })
 
-    it('should render admin menu items', () => {
-      // Arrange & Act
+    it('should render admin master menu items', () => {
       render(<Layout />)
 
-      // Assert
       expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /admin master/i })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /posts/i })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Funcionario Sidebar Navigation', () => {
+    beforeEach(() => {
+      mockUseAuthStore.mockReturnValue({
+        login: vi.fn(),
+        register: vi.fn(),
+        logout: vi.fn(),
+        user: {
+          id: 'test-func-id',
+          nome: 'Test Funcionario',
+          email: 'func@example.com',
+          role: 'FUNCIONARIO',
+          ativo: true,
+          criadoEm: '2023-12-09T12:00:00.000Z',
+          atualizadoEm: '2023-12-09T12:00:00.000Z'
+        },
+        token: 'test-token',
+        isAuthenticated: true,
+        hasRole: vi.fn((role) => role === 'FUNCIONARIO')
+      })
+    })
+
+    it('should render funcionario menu items', () => {
+      render(<Layout />)
+
+      expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /posts/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /usuários/i })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /relatórios/i })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /configurações/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument()
     })
   })

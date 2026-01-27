@@ -90,7 +90,7 @@ describe('LoginForm Component', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/senha deve ter pelo menos 8 caracteres/i)).toBeInTheDocument()
+        expect(screen.getByText(/senha deve ter pelo menos 6 caracteres/i)).toBeInTheDocument()
       })
     })
   })

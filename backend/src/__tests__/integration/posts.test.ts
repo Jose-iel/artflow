@@ -369,8 +369,12 @@ describe('Posts API Complete', () => {
     });
 
     it('should return calendar posts for specified month', async () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      
       const response = await request(app)
-        .get('/api/posts/calendar/2025/12')
+        .get(`/api/posts/calendar/${year}/${month}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 

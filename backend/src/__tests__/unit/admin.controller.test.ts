@@ -451,4 +451,243 @@ describe('AdminController', () => {
       });
     });
   });
+
+  describe('updateUser', () => {
+    it('should update user successfully', async () => {
+      mockRequest.params = { id: 'user-1' };
+      mockRequest.body = {
+        nome: 'Updated Name',
+        email: 'updated@test.com'
+      };
+
+      const user = {
+        id: 'user-1',
+        nome: 'Old Name',
+        email: 'old@test.com',
+        ativo: true
+      };
+
+      mockClienteRepository.findOne
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce(null);
+      mockClienteRepository.save.mockResolvedValue({
+        ...user,
+        nome: 'Updated Name',
+        email: 'updated@test.com',
+        senha: 'hashed'
+      });
+
+      await adminController.updateUser(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Usuário atualizado com sucesso',
+        usuario: expect.objectContaining({
+          nome: 'Updated Name',
+          email: 'updated@test.com'
+        })
+      });
+    });
+
+    it('should return 404 when user not found', async () => {
+      mockRequest.params = { id: 'nonexistent' };
+      mockRequest.body = { nome: 'Updated' };
+
+      mockClienteRepository.findOne.mockResolvedValue(null);
+
+      await adminController.updateUser(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Usuário não encontrado'
+      });
+    });
+
+    it('should prevent user from deactivating themselves', async () => {
+      mockRequest.params = { id: 'admin-id' };
+      mockRequest.body = { ativo: false };
+
+      const user = {
+        id: 'admin-id',
+        ativo: true
+      };
+
+      mockClienteRepository.findOne.mockResolvedValue(user);
+
+      await adminController.updateUser(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Não pode desativar seu próprio usuário'
+      });
+    });
+
+    it('should return 400 when email is invalid', async () => {
+      mockRequest.params = { id: 'user-1' };
+      mockRequest.body = { email: 'invalid-email' };
+
+      const user = { id: 'user-1', ativo: true };
+      mockClienteRepository.findOne.mockResolvedValue(user);
+
+      await adminController.updateUser(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Email inválido'
+      });
+    });
+
+    it('should return 400 when email already exists', async () => {
+      mockRequest.params = { id: 'user-1' };
+      mockRequest.body = { email: 'existing@test.com' };
+
+      const user = { id: 'user-1', email: 'old@test.com', ativo: true };
+      mockClienteRepository.findOne
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce({ id: 'other-user' });
+
+      await adminController.updateUser(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Email já cadastrado'
+      });
+    });
+  });
+
+  describe('updatePostStatus', () => {
+    it('should update post status successfully', async () => {
+      mockRequest.params = { id: 'post-1' };
+      mockRequest.body = { status: 'Aprovado' };
+
+      const post = {
+        id: 'post-1',
+        status: 'Não aprovado',
+        cliente: { nome: 'Cliente' },
+        createdBy: null
+      };
+
+      mockPostRepository.findOne.mockResolvedValue(post);
+      mockPostRepository.save.mockResolvedValue({
+        ...post,
+        status: 'Aprovado'
+      });
+
+      await adminController.updatePostStatus(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Status do post atualizado com sucesso',
+        post: expect.objectContaining({
+          status: 'Aprovado'
+        })
+      });
+    });
+
+    it('should return 404 when post not found', async () => {
+      mockRequest.params = { id: 'nonexistent' };
+      mockRequest.body = { status: 'Aprovado' };
+
+      mockPostRepository.findOne.mockResolvedValue(null);
+
+      await adminController.updatePostStatus(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Post não encontrado'
+      });
+    });
+  });
+
+  describe('updatePost', () => {
+    it('should update post successfully', async () => {
+      mockRequest.params = { id: 'post-1' };
+      mockRequest.body = {
+        imagemUrl: 'https://example.com/new-image.jpg',
+        legenda: 'Updated caption'
+      };
+
+      const post = {
+        id: 'post-1',
+        imagemUrl: 'https://example.com/old-image.jpg',
+        legenda: 'Old caption',
+        cliente: { nome: 'Cliente' },
+        createdBy: null
+      };
+
+      mockPostRepository.findOne.mockResolvedValue(post);
+      mockPostRepository.save.mockResolvedValue({
+        ...post,
+        imagemUrl: 'https://example.com/new-image.jpg',
+        legenda: 'Updated caption'
+      });
+
+      await adminController.updatePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Post atualizado com sucesso',
+        post: expect.objectContaining({
+          imagemUrl: 'https://example.com/new-image.jpg',
+          legenda: 'Updated caption'
+        })
+      });
+    });
+
+    it('should return 404 when post not found', async () => {
+      mockRequest.params = { id: 'nonexistent' };
+      mockRequest.body = { legenda: 'Updated' };
+
+      mockPostRepository.findOne.mockResolvedValue(null);
+
+      await adminController.updatePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Post não encontrado'
+      });
+    });
+  });
+
+  describe('deletePost', () => {
+    it('should delete post successfully', async () => {
+      mockRequest.params = { id: 'post-1' };
+
+      const post = {
+        id: 'post-1',
+        cliente: { nome: 'Cliente' }
+      };
+
+      mockPostRepository.findOne.mockResolvedValue(post);
+      mockPostRepository.delete.mockResolvedValue({ affected: 1 });
+
+      await adminController.deletePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockPostRepository.delete).toHaveBeenCalledWith('post-1');
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Post deletado com sucesso'
+      });
+    });
+
+    it('should return 404 when post not found', async () => {
+      mockRequest.params = { id: 'nonexistent' };
+
+      mockPostRepository.findOne.mockResolvedValue(null);
+
+      await adminController.deletePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Post não encontrado'
+      });
+    });
+  });
 });

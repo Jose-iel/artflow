@@ -1,6 +1,7 @@
-import { requireRole } from '../../middlewares/auth';
+import { requireRole } from '../../middlewares/permissions';
 import { UserRole } from '../../entities/User';
 import { Response, NextFunction } from 'express';
+import AppError from '../../utils/AppError';
 
 describe('requireRole Middleware', () => {
   let mockRequest: any;
@@ -8,12 +9,10 @@ describe('requireRole Middleware', () => {
   let mockNext: jest.Mock;
 
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks();
     
-    // Setup default mocks
     mockRequest = {
-      cliente: undefined
+      user: undefined
     };
     
     mockResponse = {
@@ -25,214 +24,183 @@ describe('requireRole Middleware', () => {
   });
 
   describe('when user is not authenticated', () => {
-    it('should return 401 when cliente is undefined', async () => {
-      // Arrange
+    it('should call next with error when user is undefined', () => {
       const middleware = requireRole([UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Usuário não autenticado'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+          message: 'Usuário não autenticado'
+        })
+      );
     });
 
-    it('should return 401 when cliente is null', async () => {
-      // Arrange
-      mockRequest.cliente = null;
+    it('should call next with error when user is null', () => {
+      mockRequest.user = null;
       const middleware = requireRole([UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Usuário não autenticado'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+          message: 'Usuário não autenticado'
+        })
+      );
     });
   });
 
   describe('when user is authenticated', () => {
-    it('should allow access when user has required role', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should allow access when user has required role', () => {
+      mockRequest.user = {
         id: 'admin-id',
         email: 'admin@test.com',
         role: UserRole.ADMIN_MASTER
       };
       const middleware = requireRole([UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
       expect(mockNext).toHaveBeenCalled();
-      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(AppError));
     });
 
-    it('should allow access when user role is in allowed roles array', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should allow access when user role is in allowed roles array', () => {
+      mockRequest.user = {
         id: 'admin-id',
         email: 'admin@test.com',
         role: UserRole.ADMIN_MASTER
       };
       const middleware = requireRole([UserRole.CLIENT, UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
       expect(mockNext).toHaveBeenCalled();
-      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(AppError));
     });
 
-    it('should deny access when user does not have required role', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should deny access when user does not have required role', () => {
+      mockRequest.user = {
         id: 'client-id',
         email: 'client@test.com',
         role: UserRole.CLIENT
       };
       const middleware = requireRole([UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Acesso negado - permissão insuficiente'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Permissão insuficiente'
+        })
+      );
     });
 
-    it('should deny access when client tries to access admin endpoint', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should deny access when client tries to access admin endpoint', () => {
+      mockRequest.user = {
         id: 'client-id',
         email: 'client@test.com',
         role: UserRole.CLIENT
       };
       const middleware = requireRole([UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Acesso negado - permissão insuficiente'
-      });
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Permissão insuficiente'
+        })
+      );
     });
 
-    it('should deny access when super-user tries to access client-only endpoint', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should deny access when admin tries to access client-only endpoint', () => {
+      mockRequest.user = {
         id: 'admin-id',
         email: 'admin@test.com',
         role: UserRole.ADMIN_MASTER
       };
       const middleware = requireRole([UserRole.CLIENT]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Acesso negado - permissão insuficiente'
-      });
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Permissão insuficiente'
+        })
+      );
     });
   });
 
   describe('multiple allowed roles', () => {
-    it('should allow CLIENT role when both CLIENT and ADMIN_MASTER are allowed', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should allow CLIENT role when both CLIENT and ADMIN_MASTER are allowed', () => {
+      mockRequest.user = {
         id: 'client-id',
         email: 'client@test.com',
         role: UserRole.CLIENT
       };
       const middleware = requireRole([UserRole.CLIENT, UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
       expect(mockNext).toHaveBeenCalled();
-      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(AppError));
     });
 
-    it('should allow ADMIN_MASTER role when both CLIENT and ADMIN_MASTER are allowed', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should allow ADMIN_MASTER role when both CLIENT and ADMIN_MASTER are allowed', () => {
+      mockRequest.user = {
         id: 'admin-id',
         email: 'admin@test.com',
         role: UserRole.ADMIN_MASTER
       };
       const middleware = requireRole([UserRole.CLIENT, UserRole.ADMIN_MASTER]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
       expect(mockNext).toHaveBeenCalled();
-      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(AppError));
     });
   });
 
   describe('edge cases', () => {
-    it('should handle empty allowed roles array', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should handle empty allowed roles array', () => {
+      mockRequest.user = {
         id: 'user-id',
         email: 'user@test.com',
         role: UserRole.CLIENT
       };
       const middleware = requireRole([]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Acesso negado - permissão insuficiente'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Permissão insuficiente'
+        })
+      );
     });
 
-    it('should handle undefined role in cliente object', async () => {
-      // Arrange
-      mockRequest.cliente = {
+    it('should handle undefined role in user object', () => {
+      mockRequest.user = {
         id: 'user-id',
         email: 'user@test.com',
-        role: undefined
+        role: undefined as any
       };
       const middleware = requireRole([UserRole.CLIENT]);
 
-      // Act
-      await middleware(mockRequest, mockResponse, mockNext);
+      middleware(mockRequest, mockResponse, mockNext);
 
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Acesso negado - permissão insuficiente'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Permissão insuficiente'
+        })
+      );
     });
   });
 });

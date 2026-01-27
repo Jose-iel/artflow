@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { requireAdminMaster, requireFuncionarioOrAdmin, canAccessUser, requireSameSquad } from '../../middlewares/permissions';
+import { requireAdminMaster, requireFuncionarioOrAdmin, canAccessUser, requireSameSquad, requireSameEmpresa, canAccessCliente } from '../../middlewares/permissions';
 import { UserRole } from '../../entities/User';
 import { AuthenticatedRequest } from '../../middlewares/permissions';
 import AppError from '../../utils/AppError';
@@ -293,6 +293,113 @@ describe('Permissions Middleware', () => {
           message: 'Acesso negado a squad diferente'
         })
       );
+    });
+  });
+
+  describe('requireSameEmpresa', () => {
+    it('should allow admin master to access any empresa', () => {
+      mockRequest.user!.role = UserRole.ADMIN_MASTER;
+      mockRequest.user!.empresaId = 'admin-empresa';
+      mockRequest.params = { empresaId: 'target-empresa-id' };
+
+      requireSameEmpresa(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should allow funcionário to access own empresa', () => {
+      mockRequest.user!.role = UserRole.FUNCIONARIO;
+      mockRequest.user!.empresaId = 'empresa-id';
+      mockRequest.params = { empresaId: 'empresa-id' };
+
+      requireSameEmpresa(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should deny funcionário from accessing other empresa', () => {
+      mockRequest.user!.role = UserRole.FUNCIONARIO;
+      mockRequest.user!.empresaId = 'empresa-1';
+      mockRequest.params = { empresaId: 'empresa-2' };
+
+      requireSameEmpresa(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'Acesso negado a empresa diferente'
+        })
+      );
+    });
+
+    it('should allow access when empresaId is not provided', () => {
+      mockRequest.user!.role = UserRole.FUNCIONARIO;
+      mockRequest.params = {};
+      mockRequest.body = {};
+      mockRequest.query = {};
+
+      requireSameEmpresa(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+  });
+
+  describe('canAccessCliente', () => {
+    it('should allow admin master to access any cliente', () => {
+      mockRequest.user!.role = UserRole.ADMIN_MASTER;
+      mockRequest.params = { clienteId: 'any-cliente-id' };
+
+      canAccessCliente(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should allow funcionário to access clientes (squad check in controller)', () => {
+      mockRequest.user!.role = UserRole.FUNCIONARIO;
+      mockRequest.user!.squadId = 'squad-1';
+      mockRequest.params = { clienteId: 'cliente-id' };
+
+      canAccessCliente(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should allow cliente to access when no clienteId in params', () => {
+      mockRequest.user!.role = UserRole.CLIENT;
+      mockRequest.user!.id = 'client-id';
+      mockRequest.params = {};
+
+      canAccessCliente(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(nextFunction).toHaveBeenCalled();
     });
   });
 });
