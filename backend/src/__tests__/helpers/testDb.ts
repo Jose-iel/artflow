@@ -10,6 +10,7 @@ export const initializeTestDb = async (): Promise<void> => {
     return;
   }
 
+  // TypeORM com dropSchema: true limpa e recria o banco automaticamente
   await AppDataSource.initialize();
 };
 
@@ -20,6 +21,8 @@ export const closeTestDb = async (): Promise<void> => {
 };
 
 export const clearTestDb = async (): Promise<void> => {
+  // Não é mais necessário - dropSchema: true já limpa o banco
+  // Mantido para compatibilidade com testes existentes
   if (!AppDataSource.isInitialized) {
     return;
   }

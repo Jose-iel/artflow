@@ -20,10 +20,11 @@ const databaseConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'artflow',
-  synchronize: false, // Desabilitado - usamos init.sql
-  logging: !isProduction,
+  synchronize: isTest, // Habilitado em testes para criar schema automaticamente
+  dropSchema: isTest, // Limpa banco antes de cada execução de testes
+  logging: !isProduction && !isTest,
   entities: [Cliente, Post, Empresa, Squad, User],
-  migrations: [], // Desabilitado - usamos init.sql
+  migrations: [],
   subscribers: [],
 };
 

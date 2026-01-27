@@ -13,7 +13,7 @@ process.env.DB_HOST = process.env.TEST_DB_HOST || process.env.DB_HOST || 'localh
 process.env.DB_PORT = process.env.TEST_DB_PORT || process.env.DB_PORT || '5432';
 process.env.DB_USERNAME = process.env.TEST_DB_USERNAME || process.env.DB_USERNAME || 'postgres';
 process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || process.env.DB_PASSWORD || 'postgres';
-process.env.DB_DATABASE = process.env.DB_DATABASE || 'artflow';
+process.env.DB_DATABASE = process.env.TEST_DB_DATABASE || 'artflow_test';
 
 // Increase timeout for integration tests
 jest.setTimeout(30000);
