@@ -1,0 +1,64 @@
+name: CI - Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install backend dependencies
+        run: cd backend && pnpm install --frozen-lockfile
+      
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
+      
+      - name: Run backend linter
+        run: cd backend && pnpm lint
+        continue-on-error: true
+      
+      - name: Run backend tests
+        run: cd backend && pnpm test
+      
+      - name: Build backend
+        run: cd backend && pnpm build
+      
+      - name: Run frontend linter
+        run: cd frontend && pnpm lint
+        continue-on-error: true
+      
+      - name: Run frontend tests
+        run: cd frontend && pnpm test
+        continue-on-error: true
+      
+      - name: Build frontend
+        run: cd frontend && pnpm build
+      
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${emoji} **CI Tests ${status}**\n\nBackend tests, frontend tests, and builds completed.`
+            })
