@@ -44,7 +44,7 @@ jobs:
         run: cd frontend && pnpm install --no-frozen-lockfile
       
       - name: Run backend tests
-        run: cd backend && pnpm test -- --testPathIgnorePatterns=integration
+        run: cd backend && pnpm test
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -54,14 +54,7 @@ jobs:
           JWT_SECRET: test-secret-key-for-ci
       
       - name: Run frontend tests
-        run: cd frontend && pnpm test
-        continue-on-error: true
-      
-      - name: Build backend
-        run: cd backend && pnpm build
-      
-      - name: Build frontend
-        run: cd frontend && pnpm build
+        run: cd frontend && pnpm test:ci
       
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
