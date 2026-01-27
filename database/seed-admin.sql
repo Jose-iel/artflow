@@ -9,27 +9,33 @@
 DO $$
 DECLARE
     v_admin_id UUID;
-    -- Senha temporária: admin123 (hash bcrypt)
+    -- Senha temporária: Admin@123 (hash bcrypt gerado com bcryptjs rounds=10)
     -- DEVE SER TROCADA IMEDIATAMENTE APÓS PRIMEIRO LOGIN
     v_senha_temp TEXT := '$2b$10$xRZ/RAIulCZgaILqToeIfepmwXJB9Xv6jnads4O2SYMu8dPRRQsmC';
 BEGIN
     -- Verifica se já existe algum Admin Master
     IF NOT EXISTS (SELECT 1 FROM users WHERE role = 'ADMIN_MASTER') THEN
         
-        -- Cria o primeiro Admin Master
-        SELECT cria_usuario(
+        -- Gera UUID para o admin
+        v_admin_id := gen_random_uuid();
+        
+        -- Insere diretamente na tabela users (sem usar função que pode causar hash duplo)
+        INSERT INTO users (id, nome, email, senha, role, squad_id, ativo)
+        VALUES (
+            v_admin_id,
             'Admin Master',
             'admin@artflow.com',
             v_senha_temp,
             'ADMIN_MASTER',
-            NULL
-        ) INTO v_admin_id;
+            NULL,
+            true
+        );
         
         RAISE NOTICE '========================================';
         RAISE NOTICE '✅ Admin Master criado com sucesso!';
         RAISE NOTICE '========================================';
         RAISE NOTICE 'Email: admin@artflow.com';
-        RAISE NOTICE 'Senha temporária: admin123';
+        RAISE NOTICE 'Senha temporária: Admin@123';
         RAISE NOTICE '';
         RAISE NOTICE '⚠️  ATENÇÃO: TROCAR SENHA IMEDIATAMENTE!';
         RAISE NOTICE '';

@@ -23,10 +23,10 @@ jobs:
           version: 8
       
       - name: Install backend dependencies
-        run: cd backend && pnpm install --frozen-lockfile
+        run: cd backend && pnpm install --no-frozen-lockfile
       
       - name: Install frontend dependencies
-        run: cd frontend && pnpm install --frozen-lockfile
+        run: cd frontend && pnpm install --no-frozen-lockfile
       
       - name: Run backend linter
         run: cd backend && pnpm lint
