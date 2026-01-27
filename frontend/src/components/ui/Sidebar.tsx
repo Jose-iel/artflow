@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 export interface SidebarMenuItem {
   label: string
   href: string
-  icon?: string
+  icon?: React.ReactNode
 }
 
 interface SidebarProps {
@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ menuItems, isOpen, onClose }) 
                     }
                   `}
                 >
-                  <span className="text-xl">{item.icon}</span>
+                  <span className="w-5 h-5">{item.icon}</span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
               )

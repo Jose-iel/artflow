@@ -3,9 +3,10 @@ import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useCreateAdminUser, useUpdateAdminUser } from '@/hooks/useAdminUsers'
+import { useCreateFuncionario, useUpdateFuncionario } from '@/hooks/useFuncionarios'
 import { Modal, FormField, FormSelect, FormCheckbox, FormActions } from '@/components/ui'
-import type { AdminUser, Squad } from '@/types/admin'
+import type { Funcionario } from '@/types/funcionario'
+import type { Squad } from '@/types/admin'
 
 const createSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -25,15 +26,19 @@ type CreateFormData = z.infer<typeof createSchema>
 type UpdateFormData = z.infer<typeof updateSchema>
 
 interface FuncionarioFormProps {
-  user?: AdminUser | null
+  funcionario?: Funcionario | null
   squads: Squad[]
   onClose: () => void
 }
 
-export const FuncionarioForm: React.FC<FuncionarioFormProps> = ({ user, squads, onClose }) => {
-  const createUser = useCreateAdminUser()
-  const updateUser = useUpdateAdminUser()
-  const isEditing = !!user
+export const FuncionarioForm: React.FC<FuncionarioFormProps> = ({ 
+  funcionario, 
+  squads, 
+  onClose 
+}) => {
+  const createFuncionario = useCreateFuncionario()
+  const updateFuncionario = useUpdateFuncionario()
+  const isEditing = !!funcionario
 
   const {
     register,
@@ -42,23 +47,21 @@ export const FuncionarioForm: React.FC<FuncionarioFormProps> = ({ user, squads, 
   } = useForm<CreateFormData | UpdateFormData>({
     resolver: zodResolver(isEditing ? updateSchema : createSchema),
     defaultValues: {
-      nome: user?.nome || '',
-      email: user?.email || '',
-      squadId: user?.squadId || '',
-      ...(isEditing ? { ativo: user?.ativo } : { senha: '' })
+      nome: funcionario?.nome || '',
+      email: funcionario?.email || '',
+      squadId: funcionario?.squadId || '',
+      ...(isEditing ? { ativo: funcionario?.ativo } : { senha: '' })
     }
   })
 
   const squadOptions = squads.map(s => ({ value: s.id, label: s.nome }))
 
-  const onSubmit = async (data: CreateFormData | UpdateFormData) => {
+  const handleFormSubmit = async (data: CreateFormData | UpdateFormData) => {
     try {
-      const submitData = { ...data, role: 'FUNCIONARIO' as const }
-
-      if (isEditing && user) {
-        await updateUser.mutateAsync({ id: user.id, data: submitData })
+      if (isEditing && funcionario) {
+        await updateFuncionario.mutateAsync({ id: funcionario.id, data })
       } else {
-        await createUser.mutateAsync(submitData as CreateFormData & { role: 'FUNCIONARIO' })
+        await createFuncionario.mutateAsync(data as CreateFormData)
       }
       onClose()
     } catch (err) {
@@ -67,10 +70,24 @@ export const FuncionarioForm: React.FC<FuncionarioFormProps> = ({ user, squads, 
   }
 
   return (
-    <Modal title={isEditing ? 'Editar Funcionário' : 'Novo Funcionário'} titleId="funcionario-form-title">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormField id="func-nome" label="Nome" register={register('nome')} error={errors.nome} />
-        <FormField id="func-email" label="Email" type="email" register={register('email')} error={errors.email} />
+    <Modal 
+      title={isEditing ? 'Editar Funcionário' : 'Novo Funcionário'} 
+      titleId="funcionario-form-title"
+    >
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <FormField 
+          id="func-nome" 
+          label="Nome" 
+          register={register('nome')} 
+          error={errors.nome} 
+        />
+        <FormField 
+          id="func-email" 
+          label="Email" 
+          type="email" 
+          register={register('email')} 
+          error={errors.email} 
+        />
         {!isEditing && (
           <FormField
             id="func-senha"
@@ -95,7 +112,11 @@ export const FuncionarioForm: React.FC<FuncionarioFormProps> = ({ user, squads, 
             register={register('ativo' as keyof UpdateFormData)}
           />
         )}
-        <FormActions onCancel={onClose} isSubmitting={isSubmitting} isEditing={isEditing} />
+        <FormActions 
+          onCancel={onClose} 
+          isSubmitting={isSubmitting} 
+          isEditing={isEditing} 
+        />
       </form>
     </Modal>
   )

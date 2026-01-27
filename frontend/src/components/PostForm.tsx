@@ -1,5 +1,64 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { apiPost } from '@/services/api'
+import { Lightbulb } from 'lucide-react'
+
+// Extrai o ID do arquivo do Google Drive
+const extractGoogleDriveFileId = (url: string): string | null => {
+  // Padrão: https://drive.google.com/file/d/FILE_ID/view
+  const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
+  if (driveFileMatch) return driveFileMatch[1]
+  
+  // Padrão: https://drive.google.com/open?id=FILE_ID
+  const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/)
+  if (driveOpenMatch) return driveOpenMatch[1]
+
+  // Padrão: https://drive.google.com/uc?id=FILE_ID
+  const driveUcMatch = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/)
+  if (driveUcMatch) return driveUcMatch[1]
+  
+  return null
+}
+
+// Verifica se a URL é um vídeo
+const isVideoUrl = (url: string): boolean => {
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']
+  const lowerUrl = url.toLowerCase()
+  // Verifica extensões de vídeo ou marcador #video na URL
+  return videoExtensions.some(ext => lowerUrl.includes(ext)) || 
+         lowerUrl.includes('#video')
+}
+
+// Converte links do Google Drive para formato de visualização direta
+const convertGoogleDriveUrl = (url: string, forVideo: boolean = false): string => {
+  const fileId = extractGoogleDriveFileId(url)
+  if (fileId) {
+    if (forVideo) {
+      // Para vídeos, usar o formato de preview do Drive
+      return `https://drive.google.com/file/d/${fileId}/preview`
+    }
+    // Para imagens, usar lh3.googleusercontent.com
+    return `https://lh3.googleusercontent.com/d/${fileId}`
+  }
+  return url
+}
+
+// Retorna a URL para preview (detecta automaticamente se é vídeo)
+const getPreviewUrl = (url: string): { url: string; isVideo: boolean; isDriveVideo: boolean; isDriveFile: boolean } => {
+  const fileId = extractGoogleDriveFileId(url)
+  const isVideo = isVideoUrl(url)
+  
+  if (fileId) {
+    return {
+      // Usa preview do Drive para ambos (imagem e vídeo) pois funciona melhor
+      url: `https://drive.google.com/file/d/${fileId}/preview`,
+      isVideo,
+      isDriveVideo: isVideo,
+      isDriveFile: true
+    }
+  }
+  
+  return { url, isVideo, isDriveVideo: false, isDriveFile: false }
+}
 
 export interface CreatePostData {
   imagemUrl: string
@@ -30,6 +89,7 @@ export interface Squad {
 interface PostFormProps {
   onSubmit?: (data: CreatePostData) => Promise<void>
   onCancel?: () => void
+  onDelete?: () => Promise<void>
   isAdminMaster?: boolean
   isFuncionario?: boolean
   funcionarioSquadId?: string
@@ -54,6 +114,7 @@ interface FormErrors {
 export const PostForm: React.FC<PostFormProps> = ({
   onSubmit,
   onCancel,
+  onDelete,
   isAdminMaster = false,
   isFuncionario = false,
   funcionarioSquadId,
@@ -75,6 +136,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(submitting)
+  const [previewMode, setPreviewMode] = useState<'post' | 'story'>('post')
 
   const isAdmin = isAdminMaster || isFuncionario
 
@@ -158,8 +220,17 @@ export const PostForm: React.FC<PostFormProps> = ({
     
     try {
       // Convert datetime-local to timezone-aware string for Brazil timezone
+      // Mantém o marcador #video na URL para identificar vídeos
+      const isVideo = formData.imagemUrl.includes('#video')
+      const cleanUrl = formData.imagemUrl.replace('#video', '')
+      // Para vídeos, não converter a URL (manter original do Drive)
+      // Para imagens, converter para lh3
+      const processedImageUrl = isVideo 
+        ? cleanUrl + '#video'  // Mantém URL original + marcador
+        : convertGoogleDriveUrl(cleanUrl)
+      
       const submissionData: CreatePostData = {
-        imagemUrl: formData.imagemUrl,
+        imagemUrl: processedImageUrl,
         legenda: formData.legenda,
         dataAgendada: formData.dataAgendada ? `${formData.dataAgendada}:00-03:00` : null,
         clienteId: formData.clienteId,
@@ -181,6 +252,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   }
 
   const handleInputChange = (field: keyof CreatePostData, value: string) => {
+    // Não converte automaticamente - mantém a URL original para detectar tipo
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear field error when user starts typing
     if (errors[field]) {
@@ -299,6 +371,9 @@ export const PostForm: React.FC<PostFormProps> = ({
                         }`}
                       >
                         <option value="">Selecione um cliente</option>
+                        {filteredClients.length === 0 && isFuncionario && (
+                          <option value="" disabled>Nenhum cliente na sua squad</option>
+                        )}
                         {filteredClients.map((client) => (
                           <option key={client.id} value={client.id}>
                             {client.nome} ({client.email})
@@ -315,17 +390,17 @@ export const PostForm: React.FC<PostFormProps> = ({
                   </div>
                 )}
 
-                {/* Image URL */}
+                {/* Media URL */}
                 <div>
                   <label htmlFor="imagemUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                    URL da Imagem *
+                    URL da Mídia (Imagem ou Vídeo) *
                   </label>
                   <input
                     id="imagemUrl"
                     type="url"
                     value={formData.imagemUrl}
                     onChange={(e) => handleInputChange('imagemUrl', e.target.value)}
-                    placeholder="https://exemplo.com/imagem.jpg"
+                    placeholder="https://drive.google.com/file/d/.../view"
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                       errors.imagemUrl ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -333,7 +408,32 @@ export const PostForm: React.FC<PostFormProps> = ({
                   {errors.imagemUrl && (
                     <p className="mt-1 text-sm text-red-600">{errors.imagemUrl}</p>
                   )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Cole o link do Google Drive ou URL direta da imagem/vídeo
+                  </p>
                 </div>
+
+                {/* Video Checkbox - para links do Google Drive */}
+                {formData.imagemUrl && extractGoogleDriveFileId(formData.imagemUrl) && (
+                  <div className="flex items-center">
+                    <input
+                      id="isVideo"
+                      type="checkbox"
+                      checked={formData.imagemUrl.includes('#video')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleInputChange('imagemUrl', formData.imagemUrl.replace('#video', '') + '#video')
+                        } else {
+                          handleInputChange('imagemUrl', formData.imagemUrl.replace('#video', ''))
+                        }
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isVideo" className="ml-2 block text-sm text-gray-700">
+                      Este arquivo é um vídeo
+                    </label>
+                  </div>
+                )}
 
                 {/* Caption */}
                 <div>
@@ -402,6 +502,22 @@ export const PostForm: React.FC<PostFormProps> = ({
                     </button>
                   )}
                 </div>
+
+                {/* Delete Button - only show when editing */}
+                {isEditing && onDelete && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      className="w-full bg-red-50 text-red-600 py-3 px-6 rounded-lg font-medium hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Excluir Post</span>
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
 
@@ -410,16 +526,58 @@ export const PostForm: React.FC<PostFormProps> = ({
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Preview Mobile</h3>
                 <p className="text-sm text-gray-600">Veja como seu post ficará no Instagram</p>
+                
+                {/* Toggle Post/Story */}
+                <div className="flex justify-center mt-3">
+                  <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('post')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        previewMode === 'post' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Post (1:1)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('story')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        previewMode === 'story' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Story/Reels (9:16)
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Mobile Frame */}
-              <div className="bg-gray-50 p-4">
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-sm mx-auto">
-                  {/* Mobile Instagram Header */}
+              <div className="bg-gray-50 p-4 rounded-xl">
+                <div className={`bg-white rounded-xl shadow-lg overflow-hidden mx-auto border border-gray-200 ${
+                  previewMode === 'story' ? '' : ''
+                }`} style={{ 
+                  width: previewMode === 'story' ? '270px' : '320px',
+                  maxWidth: '100%'
+                }}>
+                  {/* Instagram Header */}
                   <div className="bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-                      <span className="font-semibold text-xs">artflow</span>
+                      <div className="w-8 h-8 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-0.5">
+                        <div className="w-full h-full bg-white rounded-full p-0.5">
+                          <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-sm text-gray-900">artflow</span>
+                        {previewMode === 'story' && (
+                          <p className="text-xs text-gray-500">Patrocinado</p>
+                        )}
+                      </div>
                     </div>
                     <button className="text-gray-600 hover:text-gray-800">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,79 +586,114 @@ export const PostForm: React.FC<PostFormProps> = ({
                     </button>
                   </div>
                   
-                  {/* Mobile Post Image */}
-                  <div className="bg-black">
+                  {/* Post Image/Video */}
+                  <div className="bg-black" style={{ 
+                    height: previewMode === 'story' ? '480px' : '320px'
+                  }}>
                     {formData.imagemUrl ? (
-                      <img 
-                        src={formData.imagemUrl} 
-                        alt="Preview"
-                        className="w-full h-64 object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Imagem+Inválida'
-                        }}
-                      />
+                      (() => {
+                        const preview = getPreviewUrl(formData.imagemUrl)
+                        // Para arquivos do Google Drive, usar iframe (funciona para imagem e vídeo)
+                        if (preview.isDriveFile) {
+                          return (
+                            <iframe
+                              src={preview.url}
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                              title="Preview"
+                              style={previewMode === 'story' && preview.isVideo
+                                ? { display: 'block', marginLeft: '-23px', width: 'calc(100% + 21px)' }
+                                : { display: 'block' }
+                              }
+                            />
+                          )
+                        } else if (preview.isVideo) {
+                          return (
+                            <video 
+                              src={preview.url}
+                              className="w-full h-full object-cover"
+                              controls
+                              muted
+                            />
+                          )
+                        } else {
+                          return (
+                            <img 
+                              src={preview.url} 
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          )
+                        }
+                      })()
                     ) : (
-                      <div className="w-full h-64 flex items-center justify-center bg-gray-200">
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
                         <div className="text-center">
                           <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          <p className="text-sm text-gray-500">URL da imagem</p>
+                          <p className="text-sm text-gray-500">
+                            {previewMode === 'story' ? 'Preview 9:16' : 'Preview 1:1'}
+                          </p>
                         </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Mobile Post Actions */}
-                  <div className="bg-white px-3 py-2 flex items-center space-x-3 border-b border-gray-100">
-                    <button className="text-gray-700 hover:text-red-500 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </button>
-                    <button className="text-gray-700 hover:text-blue-500 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                    </button>
-                    <button className="text-gray-700 hover:text-blue-500 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.032 4.026a9.001 9.001 0 01-7.432 0m9.032-4.026A9.001 9.001 0 0112 3c-4.474 0-8.268 3.12-9.032 7.326m0 0A9.001 9.001 0 0012 21c4.474 0 8.268-3.12 9.032-7.326" />
+
+                  {/* Post Actions */}
+                  <div className="bg-white px-3 py-2 flex items-center justify-between border-t border-gray-100">
+                    <div className="flex items-center space-x-4">
+                      <button className="text-gray-700 hover:text-red-500 transition-colors">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </button>
+                      <button className="text-gray-700 hover:text-gray-900 transition-colors">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </button>
+                      <button className="text-gray-700 hover:text-gray-900 transition-colors">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.032 4.026a9.001 9.001 0 01-7.432 0M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button className="text-gray-700 hover:text-gray-900 transition-colors">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
                     </button>
                   </div>
-                  
-                  {/* Mobile Post Content */}
-                  <div className="bg-white px-3 py-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-                      <span className="font-semibold text-xs">artflow</span>
-                    </div>
-                    <p className="text-xs text-gray-800 mb-2">
-                      <span className="font-semibold text-xs">artflow</span> {formData.legenda || 'Sem legenda'}
+
+                  {/* Post Content */}
+                  <div className="bg-white px-3 py-2">
+                    <p className="text-sm font-semibold text-gray-900">1.234 curtidas</p>
+                    <p className="text-sm text-gray-800 mt-1">
+                      <span className="font-semibold">artflow</span>{' '}
+                      {formData.legenda || 'Sua legenda aparecerá aqui...'}
                     </p>
-                    <div className="flex items-center space-x-2 text-xs text-gray-500 mb-3">
-                      <span>{getPreviewDate()}</span>
-                    </div>
-                    
-                    {/* Mobile Status Badge */}
-                    <div className="mb-3">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                        Não aprovado
-                      </span>
-                    </div>
+                    <p className="text-xs text-gray-500 mt-1 uppercase">{getPreviewDate()}</p>
                   </div>
                 </div>
               </div>
 
               {/* Preview Tips */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Dicas</h4>
+                <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  Dicas
+                </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Use imagens com proporção 1:1 ou 4:5</li>
+                  <li>• <strong>Post:</strong> Use imagens 1:1 (quadrado) ou 4:5</li>
+                  <li>• <strong>Story/Reels:</strong> Use vídeos/imagens 9:16 (vertical)</li>
                   <li>• Legendas com até 220 caracteres funcionam melhor</li>
-                  <li>• Agende posts para horários de pico do seu público</li>
-                  <li>• Use hashtags relevantes para aumentar a visibilidade</li>
                 </ul>
               </div>
             </div>

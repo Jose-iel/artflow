@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { UserRole } from '@/types/auth'
 import { Sidebar, SidebarMenuItem } from '@/components/ui'
+import { LayoutDashboard, User, Building2, FileText, Users } from 'lucide-react'
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore()
@@ -13,22 +14,22 @@ export const Layout: React.FC = () => {
   }
 
   const getClientMenuItems = (): SidebarMenuItem[] => [
-    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { label: 'Perfil', href: '/profile', icon: '👤' }
+    { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: 'Perfil', href: '/profile', icon: <User className="w-5 h-5" /> }
   ]
 
   const getAdminMasterMenuItems = (): SidebarMenuItem[] => [
-    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { label: 'Admin Master', href: '/admin-master', icon: '🏢' },
-    { label: 'Posts', href: '/posts', icon: '📝' },
-    { label: 'Perfil', href: '/profile', icon: '👤' }
+    { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: 'Admin Master', href: '/admin-master', icon: <Building2 className="w-5 h-5" /> },
+    { label: 'Posts', href: '/posts', icon: <FileText className="w-5 h-5" /> },
+    { label: 'Perfil', href: '/profile', icon: <User className="w-5 h-5" /> }
   ]
 
   const getFuncionarioMenuItems = (): SidebarMenuItem[] => [
-    { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { label: 'Posts', href: '/posts', icon: '📝' },
-    { label: 'Usuários', href: '/admin/users', icon: '👥' },
-    { label: 'Perfil', href: '/profile', icon: '👤' }
+    { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: 'Posts', href: '/posts', icon: <FileText className="w-5 h-5" /> },
+    { label: 'Usuários', href: '/admin/users', icon: <Users className="w-5 h-5" /> },
+    { label: 'Perfil', href: '/profile', icon: <User className="w-5 h-5" /> }
   ]
 
   const getMenuItems = (): SidebarMenuItem[] => {

@@ -45,22 +45,28 @@ export class AdminController {
 
   async getPostStats(req: AuthRequest, res: Response) {
     try {
-      console.log('Getting post stats for admin:', req.user?.email);
-      const stats = await this.postRepository
+      console.log('Getting post stats for user:', req.user?.email, 'role:', req.user?.role);
+      
+      let query = this.postRepository
         .createQueryBuilder('post')
         .select('post.status', 'status')
-        .addSelect('COUNT(*)', 'count')
-        .groupBy('post.status')
-        .getRawMany();
+        .addSelect('COUNT(*)', 'count');
+
+      // Funcionário só vê stats da sua squad
+      if (req.user?.role === UserRole.FUNCIONARIO && req.user?.squadId) {
+        query = query.where('post.squadId = :squadId', { squadId: req.user.squadId });
+      }
+      // Admin Master vê tudo
+
+      const stats = await query.groupBy('post.status').getRawMany();
       
       console.log('Raw stats from database:', stats);
 
       // Transform the data for easier consumption
+      // Apenas os 3 status usados no sistema
       const formattedStats = {
         'Aprovado': 0,
         'Não aprovado': 0,
-        'Alteração': 0,
-        'Agendado': 0,
         'Publicado': 0
       };
 
@@ -427,6 +433,12 @@ export class AdminController {
         .leftJoinAndSelect('post.createdBy', 'createdBy')
         .orderBy('post.criadoEm', 'DESC');
 
+      // Funcionário só vê posts da sua squad
+      if (req.user?.role === UserRole.FUNCIONARIO && req.user?.squadId) {
+        queryBuilder.andWhere('post.squadId = :squadId', { squadId: req.user.squadId });
+      }
+      // Admin Master vê tudo
+
       // Filter by status if provided
       if (status) {
         queryBuilder.andWhere('post.status = :status', { status });
@@ -456,8 +468,14 @@ export class AdminController {
 
       const [posts, total] = await queryBuilder.getManyAndCount();
 
-      // Log image URLs for debugging
-      console.log('Admin posts with image URLs:', posts.map(p => ({ id: p.id, imagem_url: p.imagemUrl })));
+      // Atualiza automaticamente posts aprovados com data agendada no passado para Publicado
+      const now = new Date();
+      for (const post of posts) {
+        if (post.status === PostStatus.APROVADO && post.dataAgendada && new Date(post.dataAgendada) < now) {
+          post.status = PostStatus.PUBLICADO;
+          await this.postRepository.save(post);
+        }
+      }
 
       // Calculate pagination metadata
       const totalPages = Math.ceil(total / limitNum);

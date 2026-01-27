@@ -31,7 +31,7 @@ export const LoginForm: React.FC = () => {
 
   const validatePassword = (senha: string): string | undefined => {
     if (!senha) return 'Senha é obrigatória'
-    if (senha.length < 8) return 'Senha deve ter pelo menos 8 caracteres'
+    if (senha.length < 6) return 'Senha deve ter pelo menos 6 caracteres'
     return undefined
   }
 

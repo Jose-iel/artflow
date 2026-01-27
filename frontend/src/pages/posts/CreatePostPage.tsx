@@ -49,8 +49,12 @@ export const CreatePostPage: React.FC = () => {
         }
         // Funcionário: busca apenas clientes da sua squad
         else if (isFuncionario && user?.squadId) {
-          const clientsRes = await apiGet(`/squads/${user.squadId}/clientes`) as { clientes: Client[] }
-          setClients(clientsRes.clientes || [])
+          const membrosRes = await apiGet(`/squads/${user.squadId}/membros`) as { 
+            squad: { id: string; nome: string }
+            funcionarios: Client[]
+            clientes: Client[] 
+          }
+          setClients(membrosRes.clientes || [])
         }
       } catch (error) {
         console.error('Error fetching data:', error)

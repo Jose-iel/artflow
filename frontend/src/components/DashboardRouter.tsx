@@ -1,18 +1,17 @@
 import React from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { Dashboard } from '@/components/Dashboard'
-import { DashboardAdmin } from '@/components/DashboardAdmin'
+import { DashboardFuncionario } from '@/pages/funcionarios'
 
 export const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore()
 
-  // Render admin dashboard for ADMIN_MASTER, FUNCIONARIO or SUPER_USER
-  // Client dashboard for CLIENT
-  const isAdmin = user?.role === 'ADMIN_MASTER' || user?.role === 'FUNCIONARIO' || user?.role === 'SUPER_USER'
-  
-  if (isAdmin) {
-    return <DashboardAdmin />
+  // Funcionário tem dashboard próprio
+  if (user?.role === 'FUNCIONARIO') {
+    return <DashboardFuncionario />
   }
 
+  // Admin Master e Super User usam dashboard do cliente (por enquanto)
+  // TODO: Criar dashboard específico para Admin Master se necessário
   return <Dashboard />
 }

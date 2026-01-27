@@ -2,14 +2,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/Layout'
 import { DashboardRouter } from '@/components/DashboardRouter'
-import { UsersManagement } from '@/components/UsersManagement'
 import { Profile } from '@/components/Profile'
-import { CreatePostPage } from '@/components/CreatePostPage'
-import { EditPostPage } from '@/components/EditPostPage'
 import { LoginForm } from '@/components/LoginForm'
 import { RegisterForm } from '@/components/RegisterForm'
 import { AdminMasterPage } from '@/pages/admin'
-import { PostsPage } from '@/pages/PostsPage'
+import { UsersPage } from '@/pages/funcionarios'
+import { PostsPage, CreatePostPage, EditPostPage } from '@/pages/posts'
 
 function App() {
   return (
@@ -27,7 +25,7 @@ function App() {
         }>
           <Route path="/" element={<DashboardRouter />} />
           <Route path="/dashboard" element={<DashboardRouter />} />
-          <Route path="/admin/users" element={<UsersManagement />} />
+          <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin-master" element={<AdminMasterPage />} />
           <Route path="/posts" element={<PostsPage />} />
           <Route path="/profile" element={<Profile />} />

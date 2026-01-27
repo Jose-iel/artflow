@@ -1,8 +1,8 @@
 // Tab de Gerenciamento de Funcionários
 import React, { useState } from 'react'
-import { useAdminUsers, useDeleteAdminUser } from '@/hooks/useAdminUsers'
+import { useFuncionarios, useDeleteFuncionario } from '@/hooks/useFuncionarios'
 import { useSquads } from '@/hooks/useSquads'
-import { FuncionarioForm } from './FuncionarioForm'
+import { FuncionarioForm } from '@/components/funcionarios'
 import {
   ConfirmModal,
   SearchInput,
@@ -14,32 +14,30 @@ import {
   DataTable,
   Column
 } from '@/components/ui'
-import type { AdminUser } from '@/types/admin'
+import type { Funcionario } from '@/types/funcionario'
 
 export const FuncionariosTab: React.FC = () => {
-  const { data: allUsers, isLoading, error } = useAdminUsers()
+  const { data: funcionarios, isLoading, error } = useFuncionarios()
   const { data: squads } = useSquads()
-  const deleteUser = useDeleteAdminUser()
+  const deleteFuncionario = useDeleteFuncionario()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
-  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
+  const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null)
+  const [deletingFuncionario, setDeletingFuncionario] = useState<Funcionario | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
-  const funcionarios = allUsers?.filter((user) => user.role === 'FUNCIONARIO')
-
-  const filteredFuncionarios = funcionarios?.filter((user) => {
+  const filteredFuncionarios = funcionarios?.filter((func) => {
     return (
-      user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      func.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      func.email.toLowerCase().includes(searchTerm.toLowerCase())
     )
   })
 
   const handleDelete = async () => {
-    if (!deletingUser) return
+    if (!deletingFuncionario) return
     try {
-      await deleteUser.mutateAsync(deletingUser.id)
-      setDeletingUser(null)
+      await deleteFuncionario.mutateAsync(deletingFuncionario.id)
+      setDeletingFuncionario(null)
     } catch (err) {
       console.error('Erro ao excluir funcionário:', err)
     }
@@ -50,42 +48,42 @@ export const FuncionariosTab: React.FC = () => {
     return squads?.find((s) => s.id === squadId)?.nome || 'N/A'
   }
 
-  const columns: Column<AdminUser>[] = [
+  const columns: Column<Funcionario>[] = [
     {
       key: 'nome',
       header: 'Funcionário',
-      render: (user) => (
+      render: (func) => (
         <div>
-          <div className="text-sm font-medium text-gray-900">{user.nome}</div>
-          <div className="text-sm text-gray-500">{user.email}</div>
+          <div className="text-sm font-medium text-gray-900">{func.nome}</div>
+          <div className="text-sm text-gray-500">{func.email}</div>
         </div>
       )
     },
     {
       key: 'squadId',
       header: 'Squad',
-      render: (user) => (
-        <span className="text-sm text-gray-500">{getSquadNome(user.squadId)}</span>
+      render: (func) => (
+        <span className="text-sm text-gray-500">{getSquadNome(func.squadId)}</span>
       )
     },
     {
       key: 'ativo',
       header: 'Status',
-      render: (user) => <StatusBadge active={user.ativo} />
+      render: (func) => <StatusBadge active={func.ativo} />
     },
     {
       key: 'actions',
       header: 'Ações',
-      render: (user) => (
+      render: (func) => (
         <div className="space-x-3">
           <button
-            onClick={() => setEditingUser(user)}
+            onClick={() => setEditingFuncionario(func)}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
           >
             Editar
           </button>
           <button
-            onClick={() => setDeletingUser(user)}
+            onClick={() => setDeletingFuncionario(func)}
             className="text-red-600 hover:text-red-800 text-sm font-medium"
           >
             Excluir
@@ -119,7 +117,7 @@ export const FuncionariosTab: React.FC = () => {
         <DataTable
           data={filteredFuncionarios}
           columns={columns}
-          keyExtractor={(user) => user.id}
+          keyExtractor={(func) => func.id}
         />
       ) : (
         <EmptyState
@@ -129,26 +127,26 @@ export const FuncionariosTab: React.FC = () => {
         />
       )}
 
-      {(showCreateModal || editingUser) && (
+      {(showCreateModal || editingFuncionario) && (
         <FuncionarioForm
-          user={editingUser}
+          funcionario={editingFuncionario}
           squads={squads || []}
           onClose={() => {
             setShowCreateModal(false)
-            setEditingUser(null)
+            setEditingFuncionario(null)
           }}
         />
       )}
 
-      {deletingUser && (
+      {deletingFuncionario && (
         <ConfirmModal
           title="Excluir Funcionário"
-          message={`Tem certeza que deseja excluir o funcionário "${deletingUser.nome}"? Esta ação não pode ser desfeita.`}
+          message={`Tem certeza que deseja excluir o funcionário "${deletingFuncionario.nome}"? Esta ação não pode ser desfeita.`}
           confirmLabel="Excluir"
           confirmVariant="danger"
-          isLoading={deleteUser.isPending}
+          isLoading={deleteFuncionario.isPending}
           onConfirm={handleDelete}
-          onCancel={() => setDeletingUser(null)}
+          onCancel={() => setDeletingFuncionario(null)}
         />
       )}
     </div>

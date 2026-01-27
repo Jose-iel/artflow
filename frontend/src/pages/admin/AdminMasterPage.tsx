@@ -4,20 +4,21 @@ import { EmpresasTab } from './EmpresasTab'
 import { SquadsTab } from './SquadsTab'
 import { FuncionariosTab } from './FuncionariosTab'
 import { ClientesTab } from './ClientesTab'
+import { Building2, Users, Briefcase, User } from 'lucide-react'
 
 type ActiveTab = 'empresas' | 'squads' | 'funcionarios' | 'clientes'
 
 interface TabConfig {
   id: ActiveTab
   label: string
-  icon: string
+  icon: React.ReactNode
 }
 
 const tabs: TabConfig[] = [
-  { id: 'empresas', label: 'Empresas', icon: '🏢' },
-  { id: 'squads', label: 'Squads', icon: '👥' },
-  { id: 'funcionarios', label: 'Funcionários', icon: '👔' },
-  { id: 'clientes', label: 'Clientes', icon: '👤' }
+  { id: 'empresas', label: 'Empresas', icon: <Building2 className="w-5 h-5" /> },
+  { id: 'squads', label: 'Squads', icon: <Users className="w-5 h-5" /> },
+  { id: 'funcionarios', label: 'Funcionários', icon: <Briefcase className="w-5 h-5" /> },
+  { id: 'clientes', label: 'Clientes', icon: <User className="w-5 h-5" /> }
 ]
 
 export const AdminMasterPage: React.FC = () => {

@@ -42,7 +42,7 @@ export interface ClienteLoginResponse {
   }
 }
 
-// Response do login de usuários (/users/login)
+// Response do login de usuários (/users/login) - já extraído por apiPost
 export interface UserLoginResponse {
   user: {
     id: string

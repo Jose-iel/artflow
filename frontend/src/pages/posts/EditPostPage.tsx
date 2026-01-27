@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PostForm, CreatePostData, Client } from '@/components/PostForm'
 import { useAuthStore } from '@/stores/authStore'
-import { apiGet, apiPut } from '@/services/api'
+import { apiGet, apiPut, apiDelete } from '@/services/api'
 import { UserRole } from '@/types/auth'
 
 interface Post {
@@ -40,8 +40,12 @@ export const EditPostPage: React.FC = () => {
           const clientsResponse = await apiGet('/admin/clientes') as { clients: Client[] }
           setClients(clientsResponse.clients || [])
         } else if (isFuncionario && user?.squadId) {
-          const clientsResponse = await apiGet(`/squads/${user.squadId}/clientes`) as { clientes: Client[] }
-          setClients(clientsResponse.clientes || [])
+          const membrosResponse = await apiGet(`/squads/${user.squadId}/membros`) as { 
+            squad: { id: string; nome: string }
+            funcionarios: Client[]
+            clientes: Client[] 
+          }
+          setClients(membrosResponse.clientes || [])
         }
       } catch (error) {
         console.error('Error fetching post data:', error)
@@ -73,6 +77,20 @@ export const EditPostPage: React.FC = () => {
 
   const handleCancel = () => {
     navigate('/posts')
+  }
+
+  const handleDelete = async () => {
+    if (!id) return
+    
+    if (window.confirm('Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.')) {
+      try {
+        await apiDelete(`/admin/posts/${id}`)
+        navigate('/posts')
+      } catch (error) {
+        console.error('Error deleting post:', error)
+        alert('Erro ao excluir post. Tente novamente.')
+      }
+    }
   }
 
   if (loading || !post) {
@@ -120,6 +138,7 @@ export const EditPostPage: React.FC = () => {
     <PostForm 
       onSubmit={handleSubmit}
       onCancel={handleCancel}
+      onDelete={handleDelete}
       isAdminMaster={isAdminMaster}
       isFuncionario={isFuncionario}
       funcionarioSquadId={user?.squadId}

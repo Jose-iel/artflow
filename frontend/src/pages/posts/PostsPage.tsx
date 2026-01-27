@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
+import { TruncateText } from '@/components/TruncateText'
 
 interface Post {
   id: string
@@ -52,6 +54,8 @@ const statusStyles: Record<string, string> = {
 
 export const PostsPage: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isFuncionario = user?.role === 'FUNCIONARIO'
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -190,7 +194,9 @@ export const PostsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Posts</h1>
-          <p className="text-gray-600 mt-1">Gerencie todos os posts do sistema</p>
+          <p className="text-gray-600 mt-1">
+            {isFuncionario ? 'Posts da sua squad' : 'Gerencie todos os posts do sistema'}
+          </p>
         </div>
         <button
           onClick={() => navigate('/posts/create')}
@@ -203,7 +209,7 @@ export const PostsPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Cliente
@@ -226,17 +232,18 @@ export const PostsPage: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Todos</option>
-              <option value="Aprovado">Aprovado</option>
               <option value="Não aprovado">Não aprovado</option>
-              <option value="Alteração">Alteração</option>
-              <option value="Agendado">Agendado</option>
+              <option value="Aprovado">Aprovado</option>
               <option value="Publicado">Publicado</option>
             </select>
           </div>
-          <div className="md:col-span-2 flex items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 invisible">
+              Ação
+            </label>
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Limpar Filtros
             </button>
@@ -260,23 +267,46 @@ export const PostsPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empresa
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Squad
-                  </th>
+                  {/* Colunas para Admin Master */}
+                  {!isFuncionario && (
+                    <>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Empresa
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Squad
+                      </th>
+                    </>
+                  )}
+                  {/* Colunas para Funcionário */}
+                  {isFuncionario && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Post
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cliente
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Criado por
-                  </th>
+                  {isFuncionario && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Descrição
+                    </th>
+                  )}
+                  {!isFuncionario && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Criado por
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  {isFuncionario && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Retorno Cliente
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data
+                    {isFuncionario ? 'Data/Hora Postagem' : 'Data'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -286,12 +316,42 @@ export const PostsPage: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {posts.map((post) => (
                   <tr key={post.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {post.squad?.empresa?.nome || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {post.squad?.nome || '-'}
-                    </td>
+                    {/* Colunas para Admin Master */}
+                    {!isFuncionario && (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {post.squad?.empresa?.nome || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {post.squad?.nome || '-'}
+                        </td>
+                      </>
+                    )}
+                    {/* Miniatura para Funcionário */}
+                    {isFuncionario && (
+                      <td className="px-6 py-4">
+                        <div 
+                          className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigate(`/posts/edit/${post.id}`)}
+                        >
+                          {post.imagemUrl ? (
+                            <img
+                              className="h-16 w-16 object-cover"
+                              src={post.imagemUrl}
+                              alt={post.legenda || 'Post'}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                                e.currentTarget.parentElement!.innerHTML = '<div class="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">Sem img</div>'
+                              }}
+                            />
+                          ) : (
+                            <div className="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">
+                              Sem img
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {post.cliente.nome}
@@ -300,14 +360,60 @@ export const PostsPage: React.FC = () => {
                         {post.cliente.email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {post.createdBy?.nome || 'Cliente'}
-                    </td>
+                    {/* Descrição expansível para Funcionário */}
+                    {isFuncionario && (
+                      <td className="px-6 py-4 max-w-xs">
+                        {post.legenda ? (
+                          <TruncateText text={post.legenda} maxLength={80} className="text-sm text-gray-700" />
+                        ) : (
+                          <span className="text-sm text-gray-400">Sem descrição</span>
+                        )}
+                      </td>
+                    )}
+                    {!isFuncionario && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {post.createdBy?.nome || 'Cliente'}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(post.status)}
                     </td>
+                    {/* Retorno do cliente para Funcionário */}
+                    {isFuncionario && (
+                      <td className="px-6 py-4 max-w-xs">
+                        {post.status === 'Não aprovado' && post.comentarioCliente ? (
+                          <TruncateText 
+                            text={post.comentarioCliente} 
+                            maxLength={60} 
+                            className="text-sm text-red-600" 
+                          />
+                        ) : post.comentarioCliente ? (
+                          <TruncateText 
+                            text={post.comentarioCliente} 
+                            maxLength={60} 
+                            className="text-sm text-gray-600" 
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(post.criadoEm).toLocaleDateString('pt-BR')}
+                      {isFuncionario ? (
+                        post.dataAgendada ? (
+                          new Date(post.dataAgendada).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        ) : (
+                          <span className="text-gray-400">Não agendado</span>
+                        )
+                      ) : (
+                        new Date(post.criadoEm).toLocaleDateString('pt-BR')
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                       <button
