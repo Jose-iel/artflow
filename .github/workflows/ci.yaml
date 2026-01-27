@@ -5,8 +5,8 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
-    name: 🧪 Run Tests
+  test-backend:
+    name: 🧪 Backend Tests
     runs-on: ubuntu-latest
     
     services:
@@ -38,17 +38,14 @@ jobs:
         with:
           version: 8
       
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: cd backend && pnpm install --no-frozen-lockfile
       
-      - name: Install frontend dependencies
-        run: cd frontend && pnpm install --no-frozen-lockfile
-      
-      - name: Run backend linter
+      - name: Run linter
         run: cd backend && pnpm lint
         continue-on-error: true
       
-      - name: Run backend tests
+      - name: Run tests
         run: cd backend && pnpm test
         env:
           DB_HOST: localhost
@@ -58,30 +55,61 @@ jobs:
           DB_DATABASE: artflow_test
           JWT_SECRET: test-secret-key-for-ci
       
-      - name: Build backend
+      - name: Build
         run: cd backend && pnpm build
+  
+  test-frontend:
+    name: 🎨 Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - name: Run frontend linter
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: cd frontend && pnpm install --no-frozen-lockfile
+      
+      - name: Run linter
         run: cd frontend && pnpm lint
         continue-on-error: true
       
-      - name: Run frontend tests
+      - name: Run tests
         run: cd frontend && pnpm test
         continue-on-error: true
       
-      - name: Build frontend
+      - name: Build
         run: cd frontend && pnpm build
-      
+  
+  comment:
+    name: 💬 Comment PR
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: always()
+    
+    steps:
       - name: Comment PR
         uses: actions/github-script@v7
-        if: always()
         with:
           script: |
-            const status = '${{ job.status }}';
-            const emoji = status === 'success' ? '✅' : '❌';
+            const backendStatus = '${{ needs.test-backend.result }}';
+            const frontendStatus = '${{ needs.test-frontend.result }}';
+            const backendEmoji = backendStatus === 'success' ? '✅' : '❌';
+            const frontendEmoji = frontendStatus === 'success' ? '✅' : '❌';
+            const overallEmoji = (backendStatus === 'success' && frontendStatus === 'success') ? '✅' : '❌';
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `${emoji} **CI Tests ${status}**\n\nBackend tests, frontend tests, and builds completed.`
+              body: `${overallEmoji} **CI Tests Results**\n\n${backendEmoji} Backend: ${backendStatus}\n${frontendEmoji} Frontend: ${frontendStatus}`
             })
