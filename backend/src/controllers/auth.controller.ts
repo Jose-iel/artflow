@@ -240,8 +240,7 @@ export class AuthController {
       }
 
       const cliente = await this.clienteRepository.findOne({ 
-        where: { id: userId },
-        select: ['id', 'senha']
+        where: { id: userId }
       });
 
       if (!cliente) {
