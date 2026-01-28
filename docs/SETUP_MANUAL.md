@@ -935,4 +935,4 @@ tail -f /var/log/artflow-backup.log
 ---
 
 **Tempo total estimado:** 2-3 horas (primeira vez)  
-**Manutenção:** ~0 horas (tudo automático após setup)
+**Manutenção:** ~0 horas (tudo automático após setup).
