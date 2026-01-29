@@ -86,17 +86,28 @@ jobs:
       
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           debug: true
+          envs: GITHUB_TOKEN
           script: |
+            # 🔐 Configurar autenticação Git com GITHUB_TOKEN
+            git config --global credential.helper store
+            echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+            
             cd /opt/artflow
             
             echo "📥 Pulling latest code..."
-            git pull origin main
+            if ! git pull origin main; then
+              echo "❌ Git pull failed! Aborting deploy..."
+              rm -f ~/.git-credentials
+              exit 1
+            fi
             
             echo "🛑 Stopping containers..."
             docker compose -f docker/docker-compose.prod.yaml down
@@ -119,11 +130,15 @@ jobs:
               docker compose -f docker/docker-compose.prod.yaml down
               git reset --hard HEAD~1
               docker compose -f docker/docker-compose.prod.yaml up -d
+              rm -f ~/.git-credentials
               exit 1
             fi
             
             echo "🧹 Cleaning up old images..."
             docker image prune -f
+            
+            # 🔒 Remover credenciais após deploy (segurança)
+            rm -f ~/.git-credentials
             
             echo "✅ Deploy successful!"
       
