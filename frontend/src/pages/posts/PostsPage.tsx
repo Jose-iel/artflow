@@ -48,9 +48,16 @@ interface Pagination {
 const statusStyles: Record<string, string> = {
   'Aprovado': 'bg-green-100 text-green-800',
   'Não aprovado': 'bg-yellow-100 text-yellow-800',
-  'Alteração': 'bg-orange-100 text-orange-800',
   'Agendado': 'bg-blue-100 text-blue-800',
   'Publicado': 'bg-purple-100 text-purple-800'
+}
+
+// Prioridade de ordenação dos status
+const statusPriority: Record<string, number> = {
+  'Não aprovado': 1,
+  'Aprovado': 2,
+  'Agendado': 3,
+  'Publicado': 4
 }
 
 export const PostsPage: React.FC = () => {
@@ -58,6 +65,7 @@ export const PostsPage: React.FC = () => {
   const { user } = useAuthStore()
   const isFuncionario = user?.role === 'FUNCIONARIO'
   const [posts, setPosts] = useState<Post[]>([])
+  const [sortedPosts, setSortedPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -99,10 +107,11 @@ export const PostsPage: React.FC = () => {
       const response = await apiGet(url)
       const postsResponse = response as { posts: Post[], pagination: Pagination }
       
+      const newPosts = postsResponse.posts || []
       if (reset) {
-        setPosts(postsResponse.posts || [])
+        setPosts(newPosts)
       } else {
-        setPosts(prev => [...prev, ...(postsResponse.posts || [])])
+        setPosts(prev => [...prev, ...newPosts])
       }
       
       setTotalItems(postsResponse.pagination?.totalItems || 0)
@@ -136,7 +145,8 @@ export const PostsPage: React.FC = () => {
       const response = await apiGet(url)
       const postsResponse = response as { posts: Post[], pagination: Pagination }
       
-      setPosts(prev => [...prev, ...(postsResponse.posts || [])])
+      const newPosts = postsResponse.posts || []
+      setPosts(prev => [...prev, ...newPosts])
       setHasMore(postsResponse.pagination?.hasNextPage || false)
     } catch (err) {
       console.error('Error loading more posts:', err)
@@ -144,6 +154,22 @@ export const PostsPage: React.FC = () => {
       setLoadingMore(false)
     }
   }
+
+  // Ordenar posts por prioridade de status
+  useEffect(() => {
+    const sorted = [...posts].sort((a, b) => {
+      const priorityA = statusPriority[a.status] || 999
+      const priorityB = statusPriority[b.status] || 999
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+      
+      // Se mesmo status, ordenar por data de criação (mais recente primeiro)
+      return new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+    })
+    setSortedPosts(sorted)
+  }, [posts])
 
   const clearFilters = () => {
     setClienteNome('')
@@ -259,7 +285,7 @@ export const PostsPage: React.FC = () => {
 
       {/* Posts Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {posts.length === 0 ? (
+        {sortedPosts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             Nenhum post encontrado
           </div>
@@ -315,7 +341,7 @@ export const PostsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {posts.map((post) => (
+                {sortedPosts.map((post) => (
                   <tr key={post.id} className="hover:bg-gray-50">
                     {/* Colunas para Admin Master */}
                     {!isFuncionario && (

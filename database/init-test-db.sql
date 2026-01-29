@@ -1,8 +1,12 @@
-/*
- * Script de inicialização do banco de dados do ArtFlow
- * Contém a estrutura inicial das tabelas, índices, funções e triggers
- * Versão 2.0 - Com estrutura hierárquica multi-tenant
- */
+-- Script para criar o banco de dados artflow_test
+-- Este script é executado automaticamente quando o container PostgreSQL sobe
+
+-- Cria o banco de dados artflow_test se não existir
+SELECT 'CREATE DATABASE artflow_test'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'artflow_test')\gexec
+
+-- Conecta ao banco artflow_test para criar as tabelas
+\c artflow_test
 
 -- Habilitar extensão para criptografia e geração de UUID
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -62,20 +66,6 @@ CREATE TABLE IF NOT EXISTS clientes (
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Índices para melhorar performance
-CREATE INDEX IF NOT EXISTS idx_empresas_ativo ON empresas(ativo) WHERE ativo = TRUE;
-CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
-
-CREATE INDEX IF NOT EXISTS idx_squads_ativo ON squads(ativo) WHERE ativo = TRUE;
-CREATE INDEX IF NOT EXISTS idx_squads_empresa_id ON squads(empresa_id);
-
-CREATE INDEX IF NOT EXISTS idx_users_ativo ON users(ativo) WHERE ativo = TRUE;
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_squad_id ON users(squad_id);
-
-CREATE INDEX IF NOT EXISTS idx_clientes_ativo ON clientes(ativo) WHERE ativo = TRUE;
-CREATE INDEX IF NOT EXISTS idx_clientes_squad_id ON clientes(squad_id);
-
 -- Tabela de posts
 CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -95,7 +85,16 @@ CREATE TABLE IF NOT EXISTS posts (
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Índices para posts
+-- Índices para melhorar performance
+CREATE INDEX IF NOT EXISTS idx_empresas_ativo ON empresas(ativo) WHERE ativo = TRUE;
+CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
+CREATE INDEX IF NOT EXISTS idx_squads_ativo ON squads(ativo) WHERE ativo = TRUE;
+CREATE INDEX IF NOT EXISTS idx_squads_empresa_id ON squads(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_users_ativo ON users(ativo) WHERE ativo = TRUE;
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_squad_id ON users(squad_id);
+CREATE INDEX IF NOT EXISTS idx_clientes_ativo ON clientes(ativo) WHERE ativo = TRUE;
+CREATE INDEX IF NOT EXISTS idx_clientes_squad_id ON clientes(squad_id);
 CREATE INDEX IF NOT EXISTS idx_posts_cliente_id ON posts(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_posts_squad_id ON posts(squad_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_by_id ON posts(created_by_id) WHERE created_by_id IS NOT NULL;
@@ -135,7 +134,6 @@ BEFORE UPDATE ON posts
 FOR EACH ROW EXECUTE FUNCTION atualiza_data_atualizacao();
 
 -- Função para criar hash de senha (usando bcrypt compatível)
--- NOTA: As senhas devem ser pré-hasheadas com bcrypt antes de inserir
 CREATE OR REPLACE FUNCTION cria_usuario(
     p_nome TEXT,
     p_email TEXT,
@@ -161,7 +159,6 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Função para criar cliente (legado)
--- NOTA: As senhas devem ser pré-hasheadas com bcrypt antes de inserir
 CREATE OR REPLACE FUNCTION cria_cliente(
     p_nome TEXT,
     p_email TEXT,
@@ -184,117 +181,3 @@ BEGIN
     RETURN v_cliente_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Dados iniciais para testes
--- Senhas pré-hasheadas com bcrypt (cost=10)
--- senha123 -> $2b$10$xRZ/RAIulCZgaILqToeIfepmwXJB9Xv6jnads4O2SYMu8dPRRQsmC
--- func123 -> $2b$10$NwKxYAQQuXiZhbQUsNihQucS/E9kI5S0HiE.meyBsAqiGDGoIXmCK
--- cliente123 -> $2b$10$A9d2KjVxKyFG9Sxt8ZP.XeMfzHjnxSayBVfDOQ76nGpwtBVM2kmEO
-DO $$
-DECLARE
-    v_admin_master_id UUID;
-    v_empresa_id UUID;
-    v_squad_marketing_id UUID;
-    v_squad_design_id UUID;
-    v_funcionario_joao_id UUID;
-    v_funcionario_maria_id UUID;
-    v_cliente_a_id UUID;
-    v_cliente_b_id UUID;
-    v_cliente_c_id UUID;
-    -- Senhas hasheadas com bcrypt
-    v_senha_admin TEXT := '$2b$10$xRZ/RAIulCZgaILqToeIfepmwXJB9Xv6jnads4O2SYMu8dPRRQsmC';
-    v_senha_func TEXT := '$2b$10$NwKxYAQQuXiZhbQUsNihQucS/E9kI5S0HiE.meyBsAqiGDGoIXmCK';
-    v_senha_cliente TEXT := '$2b$10$A9d2KjVxKyFG9Sxt8ZP.XeMfzHjnxSayBVfDOQ76nGpwtBVM2kmEO';
-BEGIN
-    -- Cria Admin Master (senha: senha123)
-    SELECT cria_usuario(
-        'Admin Master', 
-        'admin@artflow.com', 
-        v_senha_admin,
-        'ADMIN_MASTER',
-        NULL
-    ) INTO v_admin_master_id;
-    
-    -- Cria Empresa
-    INSERT INTO empresas (nome, cnpj, descricao)
-    VALUES (
-        'Empresa Exemplo Ltda',
-        '12.345.678/0001-90',
-        'Empresa de exemplo para testes'
-    ) RETURNING id INTO v_empresa_id;
-    
-    -- Cria Squads
-    INSERT INTO squads (nome, descricao, empresa_id)
-    VALUES (
-        'Squad Marketing',
-        'Equipe responsável pelo marketing digital',
-        v_empresa_id
-    ) RETURNING id INTO v_squad_marketing_id;
-    
-    INSERT INTO squads (nome, descricao, empresa_id)
-    VALUES (
-        'Squad Design',
-        'Equipe responsável pelo design gráfico',
-        v_empresa_id
-    ) RETURNING id INTO v_squad_design_id;
-    
-    -- Cria Funcionários (senha: func123)
-    SELECT cria_usuario(
-        'João Funcionário', 
-        'joao@artflow.com', 
-        v_senha_func,
-        'FUNCIONARIO',
-        v_squad_marketing_id
-    ) INTO v_funcionario_joao_id;
-    
-    SELECT cria_usuario(
-        'Maria Funcionária', 
-        'maria@artflow.com', 
-        v_senha_func,
-        'FUNCIONARIO',
-        v_squad_design_id
-    ) INTO v_funcionario_maria_id;
-    
-    -- Cria Clientes (legado) (senha: cliente123)
-    SELECT cria_cliente(
-        'Cliente A', 
-        'cliente.a@artflow.com', 
-        v_senha_cliente,
-        v_squad_marketing_id
-    ) INTO v_cliente_a_id;
-    
-    SELECT cria_cliente(
-        'Cliente B', 
-        'cliente.b@artflow.com', 
-        v_senha_cliente,
-        v_squad_marketing_id
-    ) INTO v_cliente_b_id;
-    
-    SELECT cria_cliente(
-        'Cliente C', 
-        'cliente.c@artflow.com', 
-        v_senha_cliente,
-        v_squad_design_id
-    ) INTO v_cliente_c_id;
-    
-    -- Adiciona posts criados pelos funcionários para os clientes
-    INSERT INTO posts (cliente_id, squad_id, created_by_id, data_postagem, data_agendada, imagem_url, legenda, status, comentario_cliente)
-    VALUES 
-        (v_cliente_a_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '3 days', 'https://picsum.photos/seed/post1/400/400', 'Post para Cliente A - Campanha de marketing digital com foco em redes sociais e engajamento do público-alvo', 'Não aprovado', 'Precisa ajustar as cores, não está de acordo com a identidade visual da marca'),
-        (v_cliente_b_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '5 days', 'https://picsum.photos/seed/post2/400/400', 'Post para Cliente B - Lançamento de produto novo', 'Aprovado', NULL),
-        (v_cliente_c_id, v_squad_design_id, v_funcionario_maria_id, CURRENT_TIMESTAMP + INTERVAL '2 days', CURRENT_TIMESTAMP + INTERVAL '7 days', 'https://picsum.photos/seed/post3/400/400', 'Post para Cliente C - Design institucional', 'Agendado', NULL);
-    
-    -- Adiciona posts criados pelos próprios clientes (para testes)
-    INSERT INTO posts (cliente_id, squad_id, data_postagem, data_agendada, imagem_url, legenda, status, comentario_cliente)
-    VALUES 
-        (v_cliente_a_id, v_squad_marketing_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '10 days', 'https://picsum.photos/seed/post4/400/400', 'Post criado pelo Cliente A - Promoção especial de fim de ano com descontos exclusivos para clientes fiéis', 'Não aprovado', 'A imagem precisa ter mais destaque para o desconto');
-    
-    RAISE NOTICE 'Dados iniciais criados com sucesso';
-    RAISE NOTICE 'Admin Master: admin@artflow.com (senha: senha123)';
-    RAISE NOTICE 'Funcionários: joao@artflow.com, maria@artflow.com (senha: func123)';
-    RAISE NOTICE 'Clientes: cliente.a@artflow.com, cliente.b@artflow.com, cliente.c@artflow.com (senha: cliente123)';
-    
-EXCEPTION WHEN OTHERS THEN
-    -- Ignora erros (como usuário já existente) e continua
-    RAISE NOTICE 'Erro ao criar dados iniciais: %', SQLERRM;
-END $$;

@@ -214,7 +214,7 @@ describe('AdminController', () => {
       // Assert
       expect(mockClienteRepository.find).toHaveBeenCalledWith({
         select: ['id', 'nome', 'email', 'ativo', 'squadId', 'criadoEm', 'atualizadoEm'],
-        order: { criadoEm: 'DESC' }
+        order: { criadoEm: 'ASC' }
       });
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'success',

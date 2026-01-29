@@ -6,7 +6,6 @@ import { Squad } from './Squad';
 export enum PostStatus {
   APROVADO = 'Aprovado',
   NAO_APROVADO = 'Não aprovado',
-  ALTERACAO = 'Alteração',
   AGENDADO = 'Agendado',
   PUBLICADO = 'Publicado'
 }

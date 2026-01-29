@@ -25,7 +25,6 @@ interface Cliente {
 interface PostStats {
   'Aprovado': number
   'Não aprovado': number
-  'Alteração': number
   'Agendado': number
   'Publicado': number
 }
@@ -38,7 +37,6 @@ export const DashboardFuncionario: React.FC = () => {
   const [postStats, setPostStats] = useState<PostStats>({
     'Aprovado': 0,
     'Não aprovado': 0,
-    'Alteração': 0,
     'Agendado': 0,
     'Publicado': 0
   })

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AppDataSource } from '../config/data-source';
 import { Post, PostStatus } from '../entities/Post';
 import { Cliente } from '../entities/Cliente';
-import { User, UserRole } from '../entities/User';
+import { UserRole } from '../entities/User';
 import { CreatePostDto, UpdatePostStatusDto, PostResponseDto, PostListResponseDto, CalendarPostResponseDto } from '../dtos/post.dto';
 import { AuthenticatedRequest } from '../middlewares/auth';
 import AppError from '../utils/AppError';
@@ -251,9 +251,9 @@ export class PostController {
         throw new AppError('Status inválido', 400);
       }
 
-      // Require comment when requesting changes
-      if (status === PostStatus.ALTERACAO && !comentarioAdmin) {
-        throw new AppError('Comentário do administrador é obrigatório quando solicitar alterações', 400);
+      // Require comment when client rejects post
+      if (status === PostStatus.NAO_APROVADO && !comentarioCliente && req.user?.role === UserRole.CLIENT) {
+        throw new AppError('Comentário do cliente é obrigatório ao reprovar', 400);
       }
 
       const post = await this.postRepository.findOne({
@@ -273,9 +273,9 @@ export class PostController {
         if (post.squadId !== req.user.squadId) {
           throw new AppError('Acesso negado', 403);
         }
-        // Funcionário can only approve, schedule, or request changes
-        if (![PostStatus.APROVADO, PostStatus.AGENDADO, PostStatus.ALTERACAO].includes(status as PostStatus)) {
-          throw new AppError('Funcionário só pode aprovar, agendar ou solicitar alterações', 403);
+        // Funcionário can only approve, reject, or schedule posts
+        if (![PostStatus.APROVADO, PostStatus.NAO_APROVADO, PostStatus.AGENDADO].includes(status as PostStatus)) {
+          throw new AppError('Funcionário só pode aprovar, reprovar ou agendar', 403);
         }
       } else {
         // Cliente can only update their own posts and only request changes or approve

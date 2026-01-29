@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/data-source';
 import { Cliente } from '../entities/Cliente';
-import { User, UserRole } from '../entities/User';
+import { UserRole } from '../entities/User';
 import { Post, PostStatus } from '../entities/Post';
 import { AuthRequest } from '../middlewares/auth';
-import AppError from '../utils/AppError';
 import { Not } from 'typeorm';
 import bcrypt from 'bcrypt';
 
@@ -68,7 +67,6 @@ export class AdminController {
       const formattedStats = {
         'Aprovado': 0,
         'Não aprovado': 0,
-        'Alteração': 0,
         'Agendado': 0,
         'Publicado': 0
       };
@@ -174,7 +172,7 @@ export class AdminController {
     try {
       const users = await this.clienteRepository.find({
         select: ['id', 'nome', 'email', 'ativo', 'squadId', 'criadoEm', 'atualizadoEm'],
-        order: { criadoEm: 'DESC' }
+        order: { criadoEm: 'ASC' }
       });
 
       return res.json({

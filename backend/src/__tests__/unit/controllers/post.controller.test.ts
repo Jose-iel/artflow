@@ -376,14 +376,14 @@ describe('PostController', () => {
       });
     });
 
-    it('should return 400 when requesting changes without comment', async () => {
+    it('should return 400 when cliente rejects without comment', async () => {
       mockRequest.user = {
-        id: 'admin-id',
-        role: UserRole.ADMIN_MASTER
+        id: 'cliente-id',
+        role: UserRole.CLIENT
       };
       mockRequest.params = { id: 'post-1' };
       mockRequest.body = {
-        status: PostStatus.ALTERACAO
+        status: PostStatus.NAO_APROVADO
       };
 
       await postController.updatePostStatus(mockRequest, mockResponse);
@@ -391,7 +391,7 @@ describe('PostController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'error',
-        message: 'Comentário do administrador é obrigatório quando solicitar alterações'
+        message: 'Comentário do cliente é obrigatório ao reprovar'
       });
     });
 

@@ -4,7 +4,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface PostStats {
   'Aprovado': number
   'Não aprovado': number
-  'Alteração': number
   'Agendado': number
   'Publicado': number
 }
@@ -44,7 +43,6 @@ export const PostStatsChart: React.FC<PostStatsChartProps> = React.memo(({ data,
   const statusColors = {
     'Aprovado': '#10b981', // green-500
     'Não aprovado': '#f59e0b', // amber-500
-    'Alteração': '#ef4444', // red-500
     'Agendado': '#3b82f6', // blue-500
     'Publicado': '#06b6d4' // cyan-500
   }

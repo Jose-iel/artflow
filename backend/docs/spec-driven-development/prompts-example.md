@@ -41,7 +41,7 @@ Como usuário, quero ser notificado quando meu post for aprovado/rejeitado.
 
 Requisitos:
 - Entity: Notification (id, userId, tipo, mensagem, lida, postId, criadoEm)
-- Tipos: POST_APROVADO, POST_REJEITADO, ALTERACAO_SOLICITADA
+- Tipos: POST_APROVADO, POST_REJEITADO
 - Endpoints: listar minhas notificações, marcar como lida, marcar todas como lidas
 - Permissões: usuário só vê suas próprias notificações
 

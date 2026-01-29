@@ -280,12 +280,12 @@ describe('Posts API Complete', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           status: 'Não aprovado',
-          comentarioAdmin: 'Conteúdo inadequado'
+          comentarioCliente: 'Conteúdo inadequado'
         })
         .expect(200);
 
       expect(response.body.post.status).toBe('Não aprovado');
-      expect(response.body.post.comentarioAdmin).toBe('Conteúdo inadequado');
+      expect(response.body.post.comentarioCliente).toBe('Conteúdo inadequado');
     });
 
     it('should approve post successfully', async () => {
@@ -300,16 +300,17 @@ describe('Posts API Complete', () => {
       expect(response.body.post.status).toBe('Aprovado');
     });
 
-    it('should return error when requesting changes without comment', async () => {
+    it('should return error when rejecting without comment', async () => {
       const response = await request(app)
         .patch(`/api/posts/${createdPostId}/status`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          status: 'Alteração'
+          status: 'Não aprovado'
         })
         .expect(400);
 
-      expect(response.body).toHaveProperty('message');
+      expect(response.body.status).toBe('error');
+      expect(response.body.message).toBe('Comentário do cliente é obrigatório ao reprovar');
     });
 
     it('should return error for invalid status', async () => {

@@ -58,6 +58,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../database/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d artflow"]
       interval: 5s

@@ -211,7 +211,6 @@ import { AppError } from '../errors/AppError';
 export enum PostStatus {
   NAO_APROVADO = 'Não aprovado',
   APROVADO = 'Aprovado',
-  ALTERACAO = 'Alteração',
   AGENDADO = 'Agendado',
   PUBLICADO = 'Publicado'
 }
@@ -267,8 +266,7 @@ export class Post {
    * Verifica se o post pode ser aprovado
    */
   canBeApproved(): boolean {
-    return this.status === PostStatus.NAO_APROVADO || 
-           this.status === PostStatus.ALTERACAO;
+    return this.status === PostStatus.NAO_APROVADO;
   }
 
   /**
@@ -286,14 +284,14 @@ export class Post {
   }
 
   /**
-   * Solicita alteração no post
-   * @param comentario Comentário obrigatório explicando a alteração
+   * Reprova o post
+   * @param comentario Comentário obrigatório explicando a reprovação
    */
-  requestChanges(comentario: string): void {
+  reject(comentario: string): void {
     if (!comentario?.trim()) {
-      throw new AppError('Comentário é obrigatório ao solicitar alterações', 400);
+      throw new AppError('Comentário é obrigatório ao reprovar', 400);
     }
-    this.status = PostStatus.ALTERACAO;
+    this.status = PostStatus.NAO_APROVADO;
     this.comentarioAdmin = comentario;
   }
 
@@ -384,8 +382,8 @@ export class UpdatePostStatusRequestDto {
   @IsString()
   comentarioCliente?: string;
 
-  @ValidateIf(o => o.status === PostStatus.ALTERACAO)
-  @IsNotEmpty({ message: 'Comentário é obrigatório ao solicitar alterações' })
+  @ValidateIf(o => o.status === PostStatus.NAO_APROVADO)
+  @IsNotEmpty({ message: 'Comentário é obrigatório ao reprovar' })
   @IsString()
   comentarioAdmin?: string;
 }
@@ -587,8 +585,8 @@ export class PostService implements IPostService {
       case PostStatus.APROVADO:
         post.approve();
         break;
-      case PostStatus.ALTERACAO:
-        post.requestChanges(dto.comentarioAdmin!);
+      case PostStatus.NAO_APROVADO:
+        post.reject(dto.comentarioAdmin!);
         break;
       case PostStatus.AGENDADO:
         if (!post.dataAgendada) {

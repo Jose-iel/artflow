@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS posts (
     legenda TEXT,
     status TEXT NOT NULL 
         DEFAULT 'Não aprovado' 
-        CHECK (status IN ('Aprovado', 'Não aprovado', 'Alteração', 'Agendado', 'Publicado')),
+        CHECK (status IN ('Aprovado', 'Não aprovado', 'Agendado', 'Publicado')),
     comentario_cliente TEXT,
     comentario_admin TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

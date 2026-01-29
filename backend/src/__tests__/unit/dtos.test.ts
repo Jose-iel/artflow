@@ -182,7 +182,7 @@ describe('DTOs', () => {
       });
 
       it('should accept all valid status values', () => {
-        const validStatuses = ['Aprovado', 'Não aprovado', 'Alteração', 'Agendado', 'Publicado'] as const;
+        const validStatuses = ['Aprovado', 'Não aprovado', 'Agendado', 'Publicado'] as const;
 
         validStatuses.forEach(status => {
           // Act

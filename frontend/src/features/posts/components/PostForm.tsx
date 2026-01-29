@@ -450,7 +450,6 @@ export const PostForm: React.FC<PostFormProps> = ({
                     >
                       <option value="Não aprovado">Não aprovado</option>
                       <option value="Aprovado">Aprovado</option>
-                      <option value="Alteração">Alteração</option>
                       <option value="Agendado">Agendado</option>
                       <option value="Publicado">Publicado</option>
                     </select>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Dialog } from '@headlessui/react'
-import { XMarkIcon, CheckCircleIcon, XCircleIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { getPreviewUrl } from '@/utils/googleDriveUtils'
 
 interface PostModalProps {
@@ -73,7 +73,6 @@ export const PostModal: React.FC<PostModalProps> = ({
           date: 'Aguardando agendamento'
         }
       case 'Não aprovado':
-      case 'Alteração':
         return {
           label: 'Postagem',
           date: 'Aguardando aprovação'
@@ -91,7 +90,6 @@ export const PostModal: React.FC<PostModalProps> = ({
       case 'Aprovado': return 'text-green-600 bg-green-100'
       case 'Não aprovado': return 'text-red-600 bg-red-100'
       case 'Agendado': return 'text-blue-600 bg-blue-100'
-      case 'Alteração': return 'text-yellow-600 bg-yellow-100'
       default: return 'text-gray-600 bg-gray-100'
     }
   }
@@ -102,7 +100,7 @@ export const PostModal: React.FC<PostModalProps> = ({
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       {/* Full-screen container to center the panel */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
+      <div className="fixed inset-0 flex items-start justify-center p-4 pt-8">
         {/* The actual modal panel */}
         <Dialog.Panel className="mx-auto max-w-6xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh]">
           {/* Mobile Layout - Stacked */}
@@ -275,37 +273,55 @@ export const PostModal: React.FC<PostModalProps> = ({
                         style={{ accentColor: '#dc2626' }}
                       />
                       <XCircleIcon className="w-4 h-4 text-red-600" />
-                      <span className="text-sm font-medium">Reprovar Post</span>
-                    </label>
-                    
-                    <label className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status-mobile"
-                        value="Alteração"
-                        checked={selectedStatus === 'Alteração'}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-4 h-4 appearance-auto"
-                        style={{ accentColor: '#f59e0b', outline: 'none', border: 'none', boxShadow: 'none' }}
-                      />
-                      <PencilIcon className="w-4 h-4 text-yellow-600" />
                       <span className="text-sm font-medium">Solicitar Alteração</span>
                     </label>
+                    
                   </div>
                   
                   {/* Mobile Comment */}
-                  {(selectedStatus === 'Não aprovado' || selectedStatus === 'Alteração') && (
+                  {selectedStatus === 'Não aprovado' && (
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Comentário
+                        Comentário <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        placeholder={selectedStatus === 'Não aprovado' ? 'Motivo da reprovação...' : 'Descreva as alterações necessárias...'}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                          !comment.trim() ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Descreva detalhadamente as alterações necessárias: cores, texto, layout, proporções, elementos que devem ser adicionados ou removidos, etc."
                       />
+                      {!comment.trim() && (
+                        <p className="mt-1 text-xs text-red-600">Comentário obrigatório ao solicitar alteração no post</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Histórico do Cliente - Mobile */}
+                  {post.comentarioCliente && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Sua última solicitação:</p>
+                          <p className="text-sm text-gray-600 mt-1">{post.comentarioCliente}</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Enviado em: {new Date(post.criadoEm).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
                   
@@ -313,12 +329,11 @@ export const PostModal: React.FC<PostModalProps> = ({
                   <div className="flex space-x-3">
                     <button
                       onClick={handleStatusUpdate}
-                      disabled={!selectedStatus}
+                      disabled={!selectedStatus || (selectedStatus === 'Não aprovado' && !comment.trim())}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 text-sm"
                     >
                       {selectedStatus === 'Aprovado' ? 'Aprovar' : 
                        selectedStatus === 'Não aprovado' ? 'Reprovar' : 
-                       selectedStatus === 'Alteração' ? 'Solicitar Alteração' : 
                        'Selecionar uma Ação'}
                     </button>
                     <button
@@ -542,37 +557,55 @@ export const PostModal: React.FC<PostModalProps> = ({
                       style={{ accentColor: '#dc2626' }}
                     />
                     <XCircleIcon className="w-5 h-5 text-red-600" />
-                    <span className="text-sm font-medium">Reprovar Post</span>
-                  </label>
-                  
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status-desktop"
-                      value="Alteração"
-                      checked={selectedStatus === 'Alteração'}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="w-4 h-4 appearance-auto"
-                      style={{ accentColor: '#f59e0b', outline: 'none', border: 'none', boxShadow: 'none' }}
-                    />
-                    <PencilIcon className="w-5 h-5 text-yellow-600" />
                     <span className="text-sm font-medium">Solicitar Alteração</span>
                   </label>
+                  
                 </div>
                 
                 {/* Admin Comment */}
-                {(selectedStatus === 'Não aprovado' || selectedStatus === 'Alteração') && (
+                {selectedStatus === 'Não aprovado' && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Comentário
+                      Comentário <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={selectedStatus === 'Não aprovado' ? 'Motivo da reprovação...' : 'Descreva as alterações necessárias...'}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        !comment.trim() ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Descreva detalhadamente as alterações necessárias: cores, texto, layout, proporções, elementos que devem ser adicionados ou removidos, etc."
                     />
+                    {!comment.trim() && (
+                      <p className="mt-1 text-xs text-red-600">Comentário obrigatório ao solicitar alteração no post</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Histórico do Cliente */}
+                {post.comentarioCliente && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0">
+                        <svg className="w-4 h-4 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Sua última solicitação:</p>
+                        <p className="text-sm text-gray-600 mt-1">{post.comentarioCliente}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Enviado em: {new Date(post.criadoEm).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -580,12 +613,11 @@ export const PostModal: React.FC<PostModalProps> = ({
                 <div className="flex space-x-3">
                   <button
                     onClick={handleStatusUpdate}
-                    disabled={!selectedStatus}
+                    disabled={!selectedStatus || (selectedStatus === 'Não aprovado' && !comment.trim())}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
                   >
                     {selectedStatus === 'Aprovado' ? 'Aprovar' : 
                      selectedStatus === 'Não aprovado' ? 'Reprovar' : 
-                     selectedStatus === 'Alteração' ? 'Solicitar Alteração' : 
                      'Selecionar uma Ação'}
                   </button>
                   <button

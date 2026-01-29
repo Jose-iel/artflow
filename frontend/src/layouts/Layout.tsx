@@ -7,7 +7,7 @@ import { LayoutDashboard, User, Building2, FileText, Users } from 'lucide-react'
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (!user) {
     return <div>Carregando...</div>

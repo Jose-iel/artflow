@@ -372,17 +372,16 @@ describe('Posts API Hierarchical Tests', () => {
       expect(response.body.post.status).toBe('Aprovado');
     });
 
-    it('should allow funcionário to request changes', async () => {
+    it('should allow funcionário to reject post without comment', async () => {
       const response = await request(app)
         .patch(`/api/posts/${testPost.id}/status`)
         .set('Authorization', `Bearer ${funcionarioToken}`)
         .send({
-          status: PostStatus.ALTERACAO,
-          comentarioAdmin: 'Precisa ajustar a legenda'
+          status: PostStatus.NAO_APROVADO
         })
         .expect(200);
 
-      expect(response.body.post.status).toBe('Alteração');
+      expect(response.body.post.status).toBe('Não aprovado');
     });
 
     it('should deny funcionário from publishing', async () => {
@@ -395,7 +394,7 @@ describe('Posts API Hierarchical Tests', () => {
         .expect(403);
 
       expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Funcionário só pode aprovar, agendar ou solicitar alterações');
+      expect(response.body.message).toBe('Funcionário só pode aprovar, reprovar ou agendar');
     });
 
     it('should allow cliente to approve own post', async () => {
@@ -437,17 +436,17 @@ describe('Posts API Hierarchical Tests', () => {
       expect(response.body.message).toBe('Cliente só pode aprovar ou reprovar posts');
     });
 
-    it('should require comment when requesting changes', async () => {
+    it('should require comment when cliente rejects post', async () => {
       const response = await request(app)
         .patch(`/api/posts/${testPost.id}/status`)
-        .set('Authorization', `Bearer ${funcionarioToken}`)
+        .set('Authorization', `Bearer ${clienteToken}`)
         .send({
-          status: PostStatus.ALTERACAO
+          status: PostStatus.NAO_APROVADO
         })
         .expect(400);
 
       expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Comentário do administrador é obrigatório quando solicitar alterações');
+      expect(response.body.message).toBe('Comentário do cliente é obrigatório ao reprovar');
     });
 
     it('should deny access to other squad post for funcionário', async () => {

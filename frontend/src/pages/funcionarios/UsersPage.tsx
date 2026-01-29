@@ -60,12 +60,21 @@ export const UsersPage: React.FC = () => {
 
   const isFuncionario = user?.role === UserRole.FUNCIONARIO
 
-  // Filtrar clientes baseado no role do usuário
+  // Filtrar e ordenar clientes baseado no role do usuário
   const clientes = useMemo(() => {
+    let filtered = allClientes
     if (isFuncionario && user?.squadId) {
-      return allClientes.filter(cliente => cliente.squadId === user.squadId)
+      filtered = allClientes.filter(cliente => cliente.squadId === user.squadId)
     }
-    return allClientes
+    // Ordenar: primeiro por status (ativos primeiro), depois por data de criação
+    return [...filtered].sort((a, b) => {
+      // Ativos primeiro
+      if (a.ativo !== b.ativo) {
+        return a.ativo ? -1 : 1
+      }
+      // Se ambos têm o mesmo status, ordenar por data de criação (mais antigo primeiro)
+      return new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
+    })
   }, [allClientes, isFuncionario, user?.squadId])
 
   const fetchClientes = async () => {
@@ -158,12 +167,23 @@ export const UsersPage: React.FC = () => {
     }
   }
 
-  const handleToggleClienteStatus = async (cliente: ClienteData) => {
+  const handleToggleClienteStatus = async (clienteToToggle: ClienteData) => {
     try {
-      await apiPatch(`/admin/users/${cliente.id}`, { ativo: !cliente.ativo })
-      fetchClientes()
+      // Atualização otimista: atualiza o estado local imediatamente
+      setAllClientes(prevClientes => 
+        prevClientes.map(c => 
+          c.id === clienteToToggle.id 
+            ? { ...c, ativo: !c.ativo } 
+            : c
+        )
+      )
+      
+      // Envia a atualização para o backend
+      await apiPatch(`/admin/users/${clienteToToggle.id}`, { ativo: !clienteToToggle.ativo })
     } catch (err: any) {
+      // Se falhar, reverte a mudança e busca os dados novamente
       alert(err?.response?.data?.message || 'Erro ao alterar status')
+      fetchClientes()
     }
   }
 
@@ -398,16 +418,19 @@ export const UsersPage: React.FC = () => {
                         onClick={() => openEditClienteModal(cliente)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Editar"
+                        type="button"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => {
+                          e.preventDefault()
                           e.stopPropagation()
                           handleToggleClienteStatus(cliente)
                         }}
                         className={cliente.ativo ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}
                         title={cliente.ativo ? 'Desativar' : 'Ativar'}
+                        type="button"
                       >
                         {cliente.ativo ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
                       </button>
@@ -415,6 +438,7 @@ export const UsersPage: React.FC = () => {
                         onClick={() => openDeleteClienteModal(cliente)}
                         className="text-red-600 hover:text-red-900"
                         title="Excluir"
+                        type="button"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
