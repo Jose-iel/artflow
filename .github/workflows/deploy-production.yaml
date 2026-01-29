@@ -103,11 +103,10 @@ jobs:
             cd /opt/artflow
             
             echo "📥 Pulling latest code..."
-            if ! git pull origin main; then
-              echo "❌ Git pull failed! Aborting deploy..."
-              rm -f ~/.git-credentials
-              exit 1
-            fi
+            # Descartar mudanças locais e garantir sincronia com GitHub
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
             
             echo "🛑 Stopping containers..."
             docker compose -f docker/docker-compose.prod.yaml down
