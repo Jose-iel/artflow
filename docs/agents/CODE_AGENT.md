@@ -90,4 +90,6 @@ Se o plano tem checkmarks existentes:
 
 Todas as fases executadas. Verificações passando.
 Plano `docs/history/SPEC_[NOME].md` concluído.
+Busque com o git status quais arquivos foram modificados e com o git diff quais foram as alterações.
+Gere um commit com as alterações.
 ```

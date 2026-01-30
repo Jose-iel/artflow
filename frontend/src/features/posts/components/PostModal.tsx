@@ -243,7 +243,7 @@ export const PostModal: React.FC<PostModalProps> = ({
               </div>
               
               {/* Mobile Actions */}
-              <div className="bg-white p-4 border-t border-gray-200 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="bg-white p-4 border-t border-gray-200 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
                 <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Ações do Post</h3>
                   
