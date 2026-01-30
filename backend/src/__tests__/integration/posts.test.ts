@@ -346,15 +346,19 @@ describe('Posts API Complete', () => {
   });
 
   describe('GET /api/posts/calendar/:year/:month', () => {
+    // Use fixed dates to avoid issues when running tests at end of month
+    const testYear = 2030;
+    const testMonth = 6; // June
+
     beforeEach(async () => {
-      // Create posts for calendar tests
+      // Create posts for calendar tests with fixed dates in the same month
       await request(app)
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           imagemUrl: 'https://example.com/calendar1.jpg',
-          legenda: 'Post Janeiro',
-          dataAgendada: new Date(Date.now() + 86400000).toISOString() // Tomorrow
+          legenda: 'Post Calendario 1',
+          dataAgendada: new Date(testYear, testMonth - 1, 10, 12, 0, 0).toISOString() // June 10
         })
         .expect(201);
 
@@ -363,19 +367,15 @@ describe('Posts API Complete', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           imagemUrl: 'https://example.com/calendar2.jpg',
-          legenda: 'Post Fevereiro',
-          dataAgendada: new Date(Date.now() + 172800000).toISOString() // Day after tomorrow
+          legenda: 'Post Calendario 2',
+          dataAgendada: new Date(testYear, testMonth - 1, 20, 12, 0, 0).toISOString() // June 20
         })
         .expect(201);
     });
 
     it('should return calendar posts for specified month', async () => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      
       const response = await request(app)
-        .get(`/api/posts/calendar/${year}/${month}`)
+        .get(`/api/posts/calendar/${testYear}/${testMonth}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
