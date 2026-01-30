@@ -67,7 +67,7 @@ describe('PostModal Component', () => {
     expect(actionsContainer).toBeTruthy()
     
     // Verifica que o container tem a classe de safe-area padding
-    const hasClass = actionsContainer?.className.includes('pb-[calc(1rem+env(safe-area-inset-bottom))]')
+    const hasClass = actionsContainer?.className.includes('pb-[calc(1.5rem+env(safe-area-inset-bottom))]')
     
     expect(hasClass).toBe(true)
   })
