@@ -6,6 +6,8 @@ import adminRoutes from './admin';
 import empresasRoutes from './empresas';
 import squadsRoutes from './squads';
 import usersRoutes from './users';
+import { uploadRoutes } from './upload.routes';
+import cleanupRoutes from './cleanup.routes';
 
 const routes = Router();
 const authController = new AuthController();
@@ -24,6 +26,9 @@ routes.post('/auth/login', authController.login.bind(authController));
 routes.put('/auth/profile', authenticateToken, authController.updateProfile.bind(authController));
 routes.put('/auth/password', authenticateToken, authController.changePassword.bind(authController));
 
+// Upload routes (protected)
+routes.use(uploadRoutes);
+
 // Admin routes (super-user only)
 routes.use('/admin', adminRoutes);
 
@@ -38,5 +43,8 @@ routes.get('/posts/calendar/:year/:month', authenticateToken, postController.get
 routes.post('/posts', authenticateToken, postController.createPost.bind(postController));
 routes.get('/posts/:id', authenticateToken, postController.getPost.bind(postController));
 routes.patch('/posts/:id/status', authenticateToken, postController.updatePostStatus.bind(postController));
+
+// Cleanup routes (admin only)
+routes.use('/cleanup', cleanupRoutes);
 
 export default routes;

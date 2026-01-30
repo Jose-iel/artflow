@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { apiPost } from '@/services/api'
 import { Lightbulb } from 'lucide-react'
-import { 
-  extractGoogleDriveFileId, 
-  normalizeGoogleDriveUrl, 
-  getPreviewUrl 
-} from '@/utils/googleDriveUtils'
+import { FileUpload } from '@/components/FileUpload'
 
 export interface CreatePostData {
-  imagemUrl: string
+  imagePath: string
   legenda: string | null
   dataAgendada: string | null
   clienteId?: string
@@ -50,6 +46,7 @@ interface PostFormProps {
 }
 
 interface FormErrors {
+  imagePath?: string
   imagemUrl?: string
   legenda?: string
   dataAgendada?: string
@@ -77,7 +74,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>('')
   const [selectedSquadId, setSelectedSquadId] = useState<string>(funcionarioSquadId || '')
   const [formData, setFormData] = useState<CreatePostData>({
-    imagemUrl: initialData?.imagemUrl || '',
+    imagePath: initialData?.imagePath || '',
     legenda: initialData?.legenda || '',
     dataAgendada: initialData?.dataAgendada || '',
     clienteId: initialData?.clienteId || '',
@@ -87,6 +84,12 @@ export const PostForm: React.FC<PostFormProps> = ({
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(submitting)
   const [previewMode, setPreviewMode] = useState<'post' | 'story'>('post')
+  const [preview, setPreview] = useState<{
+    url: string
+    isVideo: boolean
+    isDriveFile: boolean
+    useIframe: boolean
+  } | null>(null)
 
   const isAdmin = isAdminMaster || isFuncionario
 
@@ -94,6 +97,19 @@ export const PostForm: React.FC<PostFormProps> = ({
   console.log('PostForm - empresas:', empresas)
   console.log('PostForm - squads:', squads)
   console.log('PostForm - clients:', clients)
+
+  // Carregar preview da imagem existente ao editar
+  useEffect(() => {
+    if (initialData?.imagePath && !preview) {
+      const isVideo = initialData.imagePath.match(/\.(mp4|mov|avi|webm)$/i)
+      setPreview({
+        url: `/uploads/${initialData.imagePath}`,
+        isVideo: !!isVideo,
+        isDriveFile: false,
+        useIframe: false
+      })
+    }
+  }, [initialData?.imagePath, preview])
 
   // Filtra squads pela empresa selecionada (apenas para Admin Master)
   const filteredSquads = useMemo(() => {
@@ -117,7 +133,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setFormData({
-        imagemUrl: initialData.imagemUrl || '',
+        imagePath: initialData.imagePath || '',
         legenda: initialData.legenda || '',
         dataAgendada: initialData.dataAgendada || '',
         clienteId: initialData.clienteId || '',
@@ -130,10 +146,8 @@ export const PostForm: React.FC<PostFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.imagemUrl.trim()) {
-      newErrors.imagemUrl = 'URL da imagem é obrigatória'
-    } else if (!formData.imagemUrl.match(/^https?:\/\/.+/)) {
-      newErrors.imagemUrl = 'URL da imagem inválida'
+    if (!formData.imagePath.trim()) {
+      newErrors.imagePath = 'O arquivo de mídia é obrigatório'
     }
 
     if (isAdminMaster) {
@@ -173,7 +187,7 @@ export const PostForm: React.FC<PostFormProps> = ({
       // A URL já está normalizada (/view) pelo handleInputChange
       // Apenas garantir que o marcador #video está presente se necessário
       const submissionData: CreatePostData = {
-        imagemUrl: formData.imagemUrl, // Já normalizada com #video se aplicável
+        imagePath: formData.imagePath,
         legenda: formData.legenda,
         dataAgendada: formData.dataAgendada ? `${formData.dataAgendada}:00-03:00` : null,
         clienteId: formData.clienteId,
@@ -196,21 +210,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   }
 
   const handleInputChange = (field: keyof CreatePostData, value: string) => {
-    let processedValue = value
-    
-    // Normaliza URLs do Google Drive automaticamente ao colar
-    if (field === 'imagemUrl' && value) {
-      const normalized = normalizeGoogleDriveUrl(value)
-      
-      // Preserva o marcador #video se já existir
-      if (value.includes('#video') && !normalized.includes('#video')) {
-        processedValue = normalized + '#video'
-      } else {
-        processedValue = normalized
-      }
-    }
-    
-    setFormData(prev => ({ ...prev, [field]: processedValue }))
+    setFormData(prev => ({ ...prev, [field]: value }))
     
     // Clear field error when user starts typing
     if (errors[field]) {
@@ -348,50 +348,31 @@ export const PostForm: React.FC<PostFormProps> = ({
                   </div>
                 )}
 
-                {/* Media URL */}
+                {/* File Upload */}
                 <div>
-                  <label htmlFor="imagemUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                    URL da Mídia (Imagem ou Vídeo) *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Arquivo de Mídia (Imagem ou Vídeo) *
                   </label>
-                  <input
-                    id="imagemUrl"
-                    type="url"
-                    value={formData.imagemUrl}
-                    onChange={(e) => handleInputChange('imagemUrl', e.target.value)}
-                    placeholder="https://drive.google.com/file/d/.../view"
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.imagemUrl ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  <FileUpload
+                    clienteId={formData.clienteId}
+                    postId={(initialData as any)?.id}
+                    onFileUploaded={(fileData) => {
+                      setFormData(prev => ({ ...prev, imagePath: fileData.filePath }))
+                      // Limpar preview antigo se existir
+                      if (preview) URL.revokeObjectURL(preview.url)
+                      setPreview({
+                        url: fileData.url,
+                        isVideo: fileData.mimeType.startsWith('video/'),
+                        isDriveFile: false,
+                        useIframe: false
+                      })
+                    }}
+                    className="mb-4"
                   />
-                  {errors.imagemUrl && (
-                    <p className="mt-1 text-sm text-red-600">{errors.imagemUrl}</p>
+                  {errors.imagePath && (
+                    <p className="mt-1 text-sm text-red-600">{errors.imagePath}</p>
                   )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    Cole o link do Google Drive ou URL direta da imagem/vídeo
-                  </p>
                 </div>
-
-                {/* Video Checkbox - para links do Google Drive */}
-                {formData.imagemUrl && extractGoogleDriveFileId(formData.imagemUrl) && (
-                  <div className="flex items-center">
-                    <input
-                      id="isVideo"
-                      type="checkbox"
-                      checked={formData.imagemUrl.includes('#video')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleInputChange('imagemUrl', formData.imagemUrl.replace('#video', '') + '#video')
-                        } else {
-                          handleInputChange('imagemUrl', formData.imagemUrl.replace('#video', ''))
-                        }
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isVideo" className="ml-2 block text-sm text-gray-700">
-                      Este arquivo é um vídeo
-                    </label>
-                  </div>
-                )}
 
                 {/* Caption */}
                 <div>
@@ -525,7 +506,7 @@ export const PostForm: React.FC<PostFormProps> = ({
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      Post (1:1)
+                      Feed (3:4)
                     </button>
                     <button
                       type="button"
@@ -536,7 +517,7 @@ export const PostForm: React.FC<PostFormProps> = ({
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      Story/Reels (9:16)
+                      Reels/Stories (9:16)
                     </button>
                   </div>
                 </div>
@@ -547,7 +528,7 @@ export const PostForm: React.FC<PostFormProps> = ({
                 <div className={`bg-white rounded-xl shadow-lg overflow-hidden mx-auto border border-gray-200 ${
                   previewMode === 'story' ? '' : ''
                 }`} style={{ 
-                  width: previewMode === 'story' ? '270px' : '320px',
+                  width: previewMode === 'story' ? '270px' : '360px',
                   maxWidth: '100%'
                 }}>
                   {/* Instagram Header */}
@@ -574,52 +555,25 @@ export const PostForm: React.FC<PostFormProps> = ({
                   
                   {/* Post Image/Video */}
                   <div className="bg-black" style={{ 
-                    height: previewMode === 'story' ? '480px' : '320px'
+                    height: previewMode === 'story' ? '480px' : '480px',
+                    aspectRatio: previewMode === 'story' ? '9/16' : '3/4'
                   }}>
-                    {formData.imagemUrl ? (
-                      (() => {
-                        const preview = getPreviewUrl(formData.imagemUrl)
-                        
-                        // Para vídeos do Google Drive, usar iframe
-                        if (preview.isDriveFile && preview.useIframe) {
-                          return (
-                            <iframe
-                              src={preview.url}
-                              width="100%"
-                              height="100%"
-                              frameBorder="0"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                              title="Preview"
-                              className="w-full h-full"
-                            />
-                          )
-                        }
-                        
-                        // Para imagens do Google Drive ou URLs diretas de imagem
-                        if (!preview.isVideo) {
-                          return (
-                            <img 
-                              src={preview.url} 
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          )
-                        }
-                        
-                        // Para URLs diretas de vídeo (não Drive)
-                        return (
-                          <video 
-                            src={preview.url}
-                            className="w-full h-full object-cover"
-                            controls
-                            muted
-                          />
-                        )
-                      })()
+                    {preview ? (
+                      preview.isVideo ? (
+                        <video 
+                          src={preview.url}
+                          className="w-full h-full object-cover"
+                          controls
+                          muted
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img 
+                          src={preview.url}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">
                         <div className="text-center">
@@ -627,7 +581,10 @@ export const PostForm: React.FC<PostFormProps> = ({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <p className="text-sm text-gray-500">
-                            {previewMode === 'story' ? 'Preview 9:16' : 'Preview 1:1'}
+                            {previewMode === 'story' ? 'Reels/Stories 9:16' : 'Feed 3:4'}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {previewMode === 'story' ? '1080 x 1920 pixels' : '1080 x 1440 pixels'}
                           </p>
                         </div>
                       </div>

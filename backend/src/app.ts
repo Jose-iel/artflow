@@ -1,5 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
 import 'express-async-errors';
 import { errors as celebrateErrors } from 'celebrate';
 import AppError from './utils/AppError';
@@ -16,7 +17,14 @@ class App {
   }
 
   private middlewares(): void {
-    this.express.use(express.json());
+    // Serving de arquivos estáticos
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+    const uploadsPath = path.isAbsolute(uploadDir) ? uploadDir : path.join(process.cwd(), uploadDir);
+    this.express.use('/uploads', express.static(uploadsPath));
+    
+    // Middleware para aumentar limite do body parser
+    this.express.use(express.json({ limit: '500mb' }));
+    this.express.use(express.urlencoded({ extended: true, limit: '500mb' }));
     
     // Handle multiple CORS origins
     const corsOrigin = process.env.CORS_ORIGIN;

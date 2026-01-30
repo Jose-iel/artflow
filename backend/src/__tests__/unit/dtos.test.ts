@@ -114,7 +114,7 @@ describe('DTOs', () => {
       it('should create valid CreatePostDto with all fields', () => {
         // Arrange
         const postData = {
-          imagemUrl: 'https://example.com/image.jpg',
+          imagePath: 'uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg',
           legenda: 'Test caption',
           dataAgendada: '2023-12-01T10:00:00Z'
         };
@@ -124,7 +124,7 @@ describe('DTOs', () => {
         Object.assign(dto, postData);
 
         // Assert
-        expect(dto.imagemUrl).toBe('https://example.com/image.jpg');
+        expect(dto.imagePath).toBe('uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg');
         expect(dto.legenda).toBe('Test caption');
         expect(dto.dataAgendada).toBe('2023-12-01T10:00:00Z');
       });
@@ -132,7 +132,7 @@ describe('DTOs', () => {
       it('should create valid CreatePostDto with only required fields', () => {
         // Arrange
         const postData = {
-          imagemUrl: 'https://example.com/image.jpg'
+          imagePath: 'uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg'
         };
 
         // Act
@@ -140,7 +140,7 @@ describe('DTOs', () => {
         Object.assign(dto, postData);
 
         // Assert
-        expect(dto.imagemUrl).toBe('https://example.com/image.jpg');
+        expect(dto.imagePath).toBe('uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg');
         expect(dto.legenda).toBeUndefined();
         expect(dto.dataAgendada).toBeUndefined();
       });
@@ -200,7 +200,7 @@ describe('DTOs', () => {
         // Arrange
         const postResponse = {
           id: '123e4567-e89b-12d3-a456-426614174000',
-          imagemUrl: 'https://example.com/image.jpg',
+          imagePath: 'uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg',
           legenda: 'Test caption',
           dataAgendada: '2023-12-01T10:00:00Z',
           status: 'Aprovado',
@@ -216,7 +216,7 @@ describe('DTOs', () => {
 
         // Assert
         expect(dto.id).toBe('123e4567-e89b-12d3-a456-426614174000');
-        expect(dto.imagemUrl).toBe('https://example.com/image.jpg');
+        expect(dto.imagePath).toBe('uploads/empresa1/cliente1/images/test-1640995200000-sample.jpg');
         expect(dto.legenda).toBe('Test caption');
         expect(dto.dataAgendada).toBe('2023-12-01T10:00:00Z');
         expect(dto.status).toBe('Aprovado');

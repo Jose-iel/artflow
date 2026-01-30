@@ -1,5 +1,5 @@
 export class CreatePostDto {
-  imagemUrl: string;
+  imagePath: string;
   legenda?: string;
   dataAgendada?: string;
   clienteId?: string;
@@ -13,7 +13,7 @@ export class UpdatePostStatusDto {
 
 export class PostResponseDto {
   id: string;
-  imagemUrl: string;
+  imagePath: string;
   legenda: string | null;
   dataAgendada: string | null;
   status: string;

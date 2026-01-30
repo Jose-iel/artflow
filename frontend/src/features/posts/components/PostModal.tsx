@@ -1,12 +1,11 @@
 import React, { useState } from 'react'
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { getPreviewUrl } from '@/utils/googleDriveUtils'
 
 interface PostModalProps {
   post: {
     id: string
-    imagemUrl: string
+    imagePath: string
     legenda: string | null
     dataAgendada: string | null
     status: string
@@ -136,52 +135,32 @@ export const PostModal: React.FC<PostModalProps> = ({
                     </button>
                   </div>
                   
-                  {/* Mobile Post Image */}
-                  <div className="bg-black">
-                    {(() => {
-                      const preview = getPreviewUrl(post.imagemUrl)
-                      
-                      // Para vídeos do Google Drive, usar iframe
-                      if (preview.isDriveFile && preview.useIframe) {
-                        return (
-                          <iframe
-                            src={preview.url}
-                            width="100%"
-                            height="256"
-                            frameBorder="0"
-                            allow="autoplay; encrypted-media"
-                            allowFullScreen
-                            title="Preview"
-                            className="w-full h-64"
-                          />
-                        )
-                      }
-                      
-                      // Para imagens do Google Drive ou URLs diretas de imagem
-                      if (!preview.isVideo) {
-                        return (
-                          <img 
-                            src={preview.url} 
-                            alt="Post"
-                            className="w-full h-64 object-cover"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Imagem+não+disponível'
-                            }}
-                          />
-                        )
-                      }
-                      
-                      // Para URLs diretas de vídeo (não Drive)
-                      return (
+                  {/* Mobile Post Image - Feed 3:4 (1080x1440) */}
+                  <div className="bg-black" style={{ aspectRatio: '3/4' }}>
+                    {post.imagePath ? (
+                      post.imagePath.match(/\.(mp4|mov|avi|webm)$/i) ? (
                         <video 
-                          src={preview.url}
-                          className="w-full h-64 object-cover"
+                          src={`/uploads/${post.imagePath}`}
+                          className="w-full h-full object-cover"
                           controls
                           muted
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img 
+                          src={`/uploads/${post.imagePath}`}
+                          alt={post.legenda || 'Post'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/1080x1440?text=Imagem+não+disponível'
+                          }}
                         />
                       )
-                    })()}
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <p className="text-gray-500">Mídia não disponível</p>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Mobile Post Actions */}
@@ -377,52 +356,32 @@ export const PostModal: React.FC<PostModalProps> = ({
                   
                   {/* Scrollable Content Area */}
                   <div className="flex-1 overflow-y-auto">
-                    {/* Post Image */}
-                    <div className="bg-black">
-                      {(() => {
-                        const preview = getPreviewUrl(post.imagemUrl)
-                        
-                        // Para vídeos do Google Drive, usar iframe
-                        if (preview.isDriveFile && preview.useIframe) {
-                          return (
-                            <iframe
-                              src={preview.url}
-                              width="100%"
-                              height="300"
-                              frameBorder="0"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                              title="Preview"
-                              className="w-full h-[300px]"
-                            />
-                          )
-                        }
-                        
-                        // Para imagens do Google Drive ou URLs diretas de imagem
-                        if (!preview.isVideo) {
-                          return (
-                            <img 
-                              src={preview.url} 
-                              alt="Post"
-                              className="w-full h-[300px] object-cover"
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/300x300?text=Imagem+não+disponível'
-                              }}
-                            />
-                          )
-                        }
-                        
-                        // Para URLs diretas de vídeo (não Drive)
-                        return (
+                    {/* Post Image - Feed 3:4 (1080x1440) */}
+                    <div className="bg-black" style={{ aspectRatio: '3/4' }}>
+                      {post.imagePath ? (
+                        post.imagePath.match(/\.(mp4|mov|avi|webm)$/i) ? (
                           <video 
-                            src={preview.url}
-                            className="w-full h-[300px] object-cover"
+                            src={`/uploads/${post.imagePath}`}
+                            className="w-full h-full object-cover"
                             controls
                             muted
+                            preload="metadata"
+                          />
+                        ) : (
+                          <img 
+                            src={`/uploads/${post.imagePath}`}
+                            alt={post.legenda || 'Post'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/1080x1440?text=Imagem+não+disponível'
+                            }}
                           />
                         )
-                      })()}
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <p className="text-gray-500">Mídia não disponível</p>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Post Actions */}

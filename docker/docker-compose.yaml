@@ -8,6 +8,7 @@ services:
       - ../backend:/app
       - /app/node_modules
       - /app/dist
+      - ../uploads:/app/uploads  # NOVO: Volume persistente
     ports:
       - "3333:3333"
     working_dir: /app
@@ -23,7 +24,7 @@ services:
       - JWT_SECRET=artflow_jwt_secret_key
       - JWT_EXPIRES_IN=1d
       - CORS_ORIGIN=http://localhost:3000,http://localhost:5173
-      - MAX_FILE_SIZE=10
+      - MAX_FILE_SIZE=500  # MUDAR: 500MB
       - UPLOAD_DIR=uploads/
     depends_on:
       db:

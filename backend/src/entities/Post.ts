@@ -27,8 +27,8 @@ export class Post {
   @Column({ name: 'data_agendada', type: 'timestamp with time zone', nullable: true })
   dataAgendada: Date | null;
 
-  @Column({ name: 'imagem_url', type: 'text' })
-  imagemUrl: string;
+  @Column({ name: 'image_path', type: 'text' })
+  imagePath: string;
 
   @Column({ name: 'legenda', type: 'text', nullable: true })
   legenda: string | null;

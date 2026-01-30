@@ -3,12 +3,11 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { getPreviewUrl } from '@/utils/googleDriveUtils'
 import { TruncateText } from '@/components'
 
 interface Post {
   id: string
-  imagemUrl: string
+  imagePath: string
   legenda: string | null
   dataAgendada: string | null
   status: string
@@ -357,38 +356,28 @@ export const PostsPage: React.FC = () => {
                     {/* Miniatura para Funcionário */}
                     {isFuncionario && (
                       <td className="px-6 py-4">
-                        <div 
+                        <div
                           className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => navigate(`/posts/edit/${post.id}`)}
                         >
-                          {post.imagemUrl ? (
-                            (() => {
-                              const preview = getPreviewUrl(post.imagemUrl)
-                              
-                              // Para vídeos, mostrar ícone de play
-                              if (preview.isVideo) {
-                                return (
-                                  <div className="h-16 w-16 flex items-center justify-center bg-gray-800 text-white">
-                                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                  </div>
-                                )
-                              }
-                              
-                              // Para imagens, usar thumbnail otimizado
-                              return (
-                                <img
-                                  className="h-16 w-16 object-cover"
-                                  src={preview.url}
-                                  alt={post.legenda || 'Post'}
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                    e.currentTarget.parentElement!.innerHTML = '<div class="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">Sem img</div>'
-                                  }}
-                                />
-                              )
-                            })()
+                          {post.imagePath ? (
+                            post.imagePath.match(/\.(mp4|mov|avi|webm)$/i) ? (
+                              <div className="h-16 w-16 flex items-center justify-center bg-gray-800 text-white">
+                                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z"/>
+                                </svg>
+                              </div>
+                            ) : (
+                              <img
+                                className="h-16 w-16 object-cover"
+                                src={`/uploads/${post.imagePath}`}
+                                alt={post.legenda || 'Post'}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                  e.currentTarget.parentElement!.innerHTML = '<div class="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">Sem img</div>'
+                                }}
+                              />
+                            )
                           ) : (
                             <div className="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">
                               Sem img

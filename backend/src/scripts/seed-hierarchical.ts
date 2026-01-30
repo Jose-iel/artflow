@@ -119,7 +119,7 @@ async function seed() {
       clienteId: cliente1.id,
       createdById: funcionario1.id,
       squadId: squad1.id,
-      imagemUrl: 'https://example.com/post1.jpg',
+      imagePath: 'uploads/empresa1/cliente1/images/post1-1640995200000-sample.jpg',
       legenda: 'Post para Cliente A',
       status: PostStatus.NAO_APROVADO
     });
@@ -129,7 +129,7 @@ async function seed() {
       clienteId: cliente2.id,
       createdById: funcionario1.id,
       squadId: squad1.id,
-      imagemUrl: 'https://example.com/post2.jpg',
+      imagePath: 'uploads/empresa1/cliente2/images/post2-1640995200000-sample.jpg',
       legenda: 'Post para Cliente B',
       status: PostStatus.APROVADO
     });
@@ -139,9 +139,9 @@ async function seed() {
       clienteId: cliente3.id,
       createdById: funcionario2.id,
       squadId: squad2.id,
-      imagemUrl: 'https://example.com/post3.jpg',
+      imagePath: 'uploads/empresa2/cliente3/images/post3-1640995200000-sample.jpg',
       legenda: 'Post para Cliente C',
-      status: PostStatus.AGENDADO
+      status: PostStatus.APROVADO
     });
     await postRepository.save(post3);
     console.log('Created Posts');

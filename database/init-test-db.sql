@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS posts (
     created_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
     data_postagem TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     data_agendada TIMESTAMP WITH TIME ZONE,
-    imagem_url TEXT NOT NULL CHECK (imagem_url ~* '^https?://.+'),
+    imagem_url TEXT CHECK (imagem_url ~* '^https?://.+'),
+    image_path TEXT,
     legenda TEXT,
     status TEXT NOT NULL 
         DEFAULT 'Não aprovado' 

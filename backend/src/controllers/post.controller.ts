@@ -15,7 +15,7 @@ export class PostController {
   private mapPostToResponse(post: Post): PostResponseDto {
     return {
       id: post.id,
-      imagemUrl: post.imagemUrl,
+      imagePath: post.imagePath,
       legenda: post.legenda || null,
       dataAgendada: post.dataAgendada ? post.dataAgendada.toISOString() : null,
       status: post.status,
@@ -154,7 +154,7 @@ export class PostController {
 
   async createPost(req: AuthenticatedRequest, res: Response) {
     try {
-      const { imagemUrl, legenda, dataAgendada, clienteId: formClienteId }: CreatePostDto = req.body;
+      const { imagePath, legenda, dataAgendada, clienteId: formClienteId }: CreatePostDto = req.body;
       
       // Determine clienteId based on user role
       let clienteId: string;
@@ -192,12 +192,8 @@ export class PostController {
       }
 
       // Validation
-      if (!imagemUrl) {
-        throw new AppError('URL da imagem é obrigatória', 400);
-      }
-
-      if (!imagemUrl.match(/^https?:\/\/.+/)) {
-        throw new AppError('URL da imagem inválida', 400);
+      if (!imagePath) {
+        throw new AppError('Caminho da imagem é obrigatório', 400);
       }
 
       // Validate scheduled date if provided
@@ -212,7 +208,7 @@ export class PostController {
         clienteId,
         squadId,
         createdById,
-        imagemUrl: imagemUrl,
+        imagePath: imagePath,
         legenda: legenda || null,
         dataAgendada: dataAgendada ? new Date(dataAgendada) : null,
         status: PostStatus.NAO_APROVADO

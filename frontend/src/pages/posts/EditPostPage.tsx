@@ -7,7 +7,7 @@ import { UserRole } from '@/types/auth'
 
 interface Post {
   id: string
-  imagemUrl: string
+  imagePath: string
   legenda: string | null
   dataAgendada: string | null
   clienteId: string
@@ -128,7 +128,7 @@ export const EditPostPage: React.FC = () => {
 
   // Convert post data to form format
   const initialData: CreatePostData = {
-    imagemUrl: post.imagemUrl,
+    imagePath: post.imagePath,
     legenda: post.legenda,
     dataAgendada: post.dataAgendada ? convertToDateTimeLocal(post.dataAgendada) : '',
     clienteId: post.clienteId,

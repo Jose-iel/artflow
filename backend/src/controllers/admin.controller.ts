@@ -16,13 +16,13 @@ interface CreateClientDto {
 
 interface CreatePostForClientDto {
   clienteId: string;
-  imagemUrl: string;
+  imagePath: string;
   legenda?: string;
   dataAgendada?: Date;
 }
 
 interface UpdatePostDto {
-  imagemUrl?: string;
+  imagePath?: string;
   legenda?: string;
   dataAgendada?: Date;
   status?: PostStatus;
@@ -349,7 +349,7 @@ export class AdminController {
 
   async createPostForClient(req: AuthRequest, res: Response) {
     try {
-      const { clienteId, imagemUrl, legenda, dataAgendada }: CreatePostForClientDto = req.body;
+      const { clienteId, imagePath, legenda, dataAgendada }: CreatePostForClientDto = req.body;
 
       // Validations
       if (!clienteId) {
@@ -359,18 +359,10 @@ export class AdminController {
         });
       }
 
-      if (!imagemUrl || !imagemUrl.trim()) {
+      if (!imagePath || !imagePath.trim()) {
         return res.status(400).json({
           status: 'error',
-          message: 'URL da imagem é obrigatória'
-        });
-      }
-
-      const urlRegex = /^https?:\/\/.+/;
-      if (!urlRegex.test(imagemUrl)) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'URL da imagem inválida'
+          message: 'Caminho da imagem é obrigatório'
         });
       }
 
@@ -397,7 +389,7 @@ export class AdminController {
       const newPost = this.postRepository.create({
         clienteId,
         createdById: req.user!.id, // Admin who created the post
-        imagemUrl: imagemUrl.trim(),
+        imagePath: imagePath.trim(),
         legenda: legenda?.trim() || null,
         dataAgendada: dataAgendada || null,
         status: PostStatus.NAO_APROVADO,
@@ -533,7 +525,7 @@ export class AdminController {
   async updatePost(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { imagemUrl, legenda, dataAgendada, status }: UpdatePostDto = req.body;
+      const { imagePath, legenda, dataAgendada, status }: UpdatePostDto = req.body;
 
       const post = await this.postRepository.findOne({
         where: { id },
@@ -548,15 +540,8 @@ export class AdminController {
       }
 
       // Update fields if provided
-      if (imagemUrl) {
-        const urlRegex = /^https?:\/\/.+/;
-        if (!urlRegex.test(imagemUrl)) {
-          return res.status(400).json({
-            status: 'error',
-            message: 'URL da imagem inválida'
-          });
-        }
-        post.imagemUrl = imagemUrl.trim();
+      if (imagePath) {
+        post.imagePath = imagePath.trim();
       }
 
       if (legenda !== undefined) {

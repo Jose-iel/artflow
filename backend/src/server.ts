@@ -4,6 +4,7 @@ import { app } from './app';
 import { AppDataSource } from './config/data-source';
 import cron from 'node-cron';
 import { PostSchedulerService } from './services/post-scheduler.service';
+import { cleanupService } from './services/cleanup.service';
 
 const startServer = async () => {
   const port = Number(process.env.PORT);
@@ -32,6 +33,10 @@ const startServer = async () => {
     });
     
     console.log('[PostScheduler] Job agendado configurado (executa todo dia à meia-noite)');
+
+    // Inicializa serviço de limpeza automática
+    cleanupService.startCleanupJob();
+    console.log('[Cleanup] Serviço de limpeza automática inicializado');
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

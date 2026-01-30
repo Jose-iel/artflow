@@ -17,7 +17,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=7d
       - CORS_ORIGIN=https://artflow.iel-company.com.br
-      - MAX_FILE_SIZE=10
+      - MAX_FILE_SIZE=500
       - UPLOAD_DIR=/app/uploads/
     ports:
       - "3333:3333"
