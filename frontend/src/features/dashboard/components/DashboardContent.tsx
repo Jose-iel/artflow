@@ -237,6 +237,7 @@ export const DashboardContent: React.FC = () => {
                             src={preview.url} 
                             alt={post.legenda || 'Post image'}
                             className="w-full h-40 sm:h-48 object-cover"
+                            referrerPolicy="no-referrer"
                             onError={(e) => {
                               e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagem+não+disponível'
                             }}

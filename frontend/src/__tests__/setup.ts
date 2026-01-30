@@ -30,18 +30,21 @@ declare global {
   }
 }
 
-globalThis.IntersectionObserver = vi.fn().mockImplementation((callback, options) => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-  root: null,
-  rootMargin: '',
-  thresholds: [],
-}))
+globalThis.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  readonly root = null
+  readonly rootMargin = ''
+  readonly thresholds = []
+  takeRecords() { return [] }
+} as any
 
 // Mock ResizeObserver
-globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+globalThis.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as any

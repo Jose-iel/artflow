@@ -164,6 +164,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                             src={preview.url} 
                             alt="Post"
                             className="w-full h-64 object-cover"
+                            referrerPolicy="no-referrer"
                             onError={(e) => {
                               e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Imagem+não+disponível'
                             }}
@@ -242,7 +243,7 @@ export const PostModal: React.FC<PostModalProps> = ({
               </div>
               
               {/* Mobile Actions */}
-              <div className="bg-white p-4 border-t border-gray-200">
+              <div className="bg-white p-4 border-t border-gray-200 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                 <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Ações do Post</h3>
                   
@@ -404,6 +405,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                               src={preview.url} 
                               alt="Post"
                               className="w-full h-[300px] object-cover"
+                              referrerPolicy="no-referrer"
                               onError={(e) => {
                                 e.currentTarget.src = 'https://via.placeholder.com/300x300?text=Imagem+não+disponível'
                               }}
