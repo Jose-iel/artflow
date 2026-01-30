@@ -63,7 +63,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/post1.jpg',
+          imagePath: 'https://example.com/post1.jpg',
           legenda: 'Primeiro post de teste',
           dataAgendada: new Date(Date.now() + 86400000).toISOString() // Tomorrow
         })
@@ -73,7 +73,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/post2.jpg',
+          imagePath: 'https://example.com/post2.jpg',
           legenda: 'Segundo post de teste',
           dataAgendada: new Date(Date.now() + 172800000).toISOString() // Day after tomorrow
         })
@@ -143,7 +143,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/post3.jpg',
+          imagePath: 'https://example.com/post3.jpg',
           legenda: 'Post para teste individual'
         })
         .expect(201);
@@ -182,7 +182,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/new-post.jpg',
+          imagePath: 'https://example.com/new-post.jpg',
           legenda: 'Novo post de teste',
           dataAgendada: new Date(Date.now() + 259200000).toISOString() // 3 days from now
         })
@@ -194,20 +194,7 @@ describe('Posts API Complete', () => {
       expect(response.body.post.status).toBe('Não aprovado');
     });
 
-    it('should return error when imagemUrl is invalid', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          imagemUrl: 'invalid-url',
-          legenda: 'Post com URL inválida'
-        })
-        .expect(400);
-
-      expect(response.body).toHaveProperty('message');
-    });
-
-    it('should return error when imagemUrl is not provided', async () => {
+    it('should return error when imagePath is not provided', async () => {
       const response = await request(app)
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
@@ -224,7 +211,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/minimal-post.jpg'
+          imagePath: 'https://example.com/minimal-post.jpg'
         })
         .expect(201);
 
@@ -238,7 +225,7 @@ describe('Posts API Complete', () => {
       await request(app)
         .post('/api/posts')
         .send({
-          imagemUrl: 'https://example.com/unauthorized.jpg',
+          imagePath: 'https://example.com/unauthorized.jpg',
           legenda: 'Post não autorizado'
         })
         .expect(401);
@@ -253,7 +240,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/post3.jpg',
+          imagePath: 'https://example.com/post3.jpg',
           legenda: 'Post para mudança de status'
         })
         .expect(201);
@@ -356,7 +343,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/calendar1.jpg',
+          imagePath: 'https://example.com/calendar1.jpg',
           legenda: 'Post Calendario 1',
           dataAgendada: new Date(testYear, testMonth - 1, 10, 12, 0, 0).toISOString() // June 10
         })
@@ -366,7 +353,7 @@ describe('Posts API Complete', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          imagemUrl: 'https://example.com/calendar2.jpg',
+          imagePath: 'https://example.com/calendar2.jpg',
           legenda: 'Post Calendario 2',
           dataAgendada: new Date(testYear, testMonth - 1, 20, 12, 0, 0).toISOString() // June 20
         })

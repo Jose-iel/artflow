@@ -134,7 +134,7 @@ describe('PostController', () => {
 
       const post = {
         id: 'post-1',
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         status: PostStatus.APROVADO,
         criadoEm: new Date(),
         atualizadoEm: new Date()
@@ -203,7 +203,7 @@ describe('PostController', () => {
         squadId: 'squad-1'
       };
       mockRequest.body = {
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         legenda: 'Test caption'
       };
 
@@ -211,7 +211,7 @@ describe('PostController', () => {
         id: 'new-post-id',
         clienteId: 'client-id',
         squadId: 'squad-1',
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         legenda: 'Test caption',
         status: PostStatus.NAO_APROVADO,
         criadoEm: new Date(),
@@ -240,7 +240,7 @@ describe('PostController', () => {
       };
       mockRequest.body = {
         clienteId: 'client-id',
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         legenda: 'Test caption'
       };
 
@@ -262,7 +262,7 @@ describe('PostController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(201);
     });
 
-    it('should return 400 when imagemUrl is missing', async () => {
+    it('should return 400 when imagePath is missing', async () => {
       mockRequest.user = {
         id: 'client-id',
         role: UserRole.CLIENT,
@@ -277,26 +277,7 @@ describe('PostController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'error',
-        message: 'URL da imagem é obrigatória'
-      });
-    });
-
-    it('should return 400 when imagemUrl is invalid', async () => {
-      mockRequest.user = {
-        id: 'client-id',
-        role: UserRole.CLIENT,
-        squadId: 'squad-1'
-      };
-      mockRequest.body = {
-        imagemUrl: 'invalid-url'
-      };
-
-      await postController.createPost(mockRequest, mockResponse);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'URL da imagem inválida'
+        message: 'Caminho da imagem é obrigatório'
       });
     });
 
@@ -307,7 +288,7 @@ describe('PostController', () => {
         squadId: 'squad-1'
       };
       mockRequest.body = {
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         dataAgendada: new Date(Date.now() - 86400000).toISOString()
       };
 

@@ -323,7 +323,7 @@ describe('AdminController', () => {
       const futureDate = new Date(Date.now() + 86400000); // Tomorrow
       mockRequest.body = {
         clienteId: 'client-id',
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         legenda: 'Test caption',
         dataAgendada: futureDate
       };
@@ -340,7 +340,7 @@ describe('AdminController', () => {
         id: 'post-id',
         clienteId: 'client-id',
         createdById: 'admin-id',
-        imagemUrl: 'https://example.com/image.jpg',
+        imagePath: 'https://example.com/image.jpg',
         legenda: 'Test caption',
         dataAgendada: futureDate,
         status: PostStatus.NAO_APROVADO,
@@ -365,7 +365,7 @@ describe('AdminController', () => {
       // Arrange
       mockRequest.body = {
         clienteId: 'non-existent',
-        imagemUrl: 'https://example.com/image.jpg'
+        imagePath: 'https://example.com/image.jpg'
       };
 
       mockClienteRepository.findOne.mockResolvedValue(null);
@@ -378,24 +378,6 @@ describe('AdminController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'error',
         message: 'Cliente não encontrado ou inativo'
-      });
-    });
-
-    it('should return error when imagemUrl is invalid', async () => {
-      // Arrange
-      mockRequest.body = {
-        clienteId: 'client-id',
-        imagemUrl: 'invalid-url'
-      };
-
-      // Act
-      await adminController.createPostForClient(mockRequest as AuthRequest, mockResponse);
-
-      // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'URL da imagem inválida'
       });
     });
   });
@@ -609,13 +591,13 @@ describe('AdminController', () => {
     it('should update post successfully', async () => {
       mockRequest.params = { id: 'post-1' };
       mockRequest.body = {
-        imagemUrl: 'https://example.com/new-image.jpg',
+        imagePath: 'https://example.com/new-image.jpg',
         legenda: 'Updated caption'
       };
 
       const post = {
         id: 'post-1',
-        imagemUrl: 'https://example.com/old-image.jpg',
+        imagePath: 'https://example.com/old-image.jpg',
         legenda: 'Old caption',
         cliente: { nome: 'Cliente' },
         createdBy: null
@@ -624,7 +606,7 @@ describe('AdminController', () => {
       mockPostRepository.findOne.mockResolvedValue(post);
       mockPostRepository.save.mockResolvedValue({
         ...post,
-        imagemUrl: 'https://example.com/new-image.jpg',
+        imagePath: 'https://example.com/new-image.jpg',
         legenda: 'Updated caption'
       });
 
@@ -634,7 +616,7 @@ describe('AdminController', () => {
         status: 'success',
         message: 'Post atualizado com sucesso',
         post: expect.objectContaining({
-          imagemUrl: 'https://example.com/new-image.jpg',
+          imagePath: 'https://example.com/new-image.jpg',
           legenda: 'Updated caption'
         })
       });

@@ -254,7 +254,7 @@ describe('Admin API Integration Tests', () => {
     it('should create a post for a client as admin', async () => {
       const postData = {
         clienteId: clientUser.id,
-        imagemUrl: 'https://example.com/test-image.jpg',
+        imagePath: 'https://example.com/test-image.jpg',
         legenda: 'Test caption',
         dataAgendada: new Date(Date.now() + 86400000).toISOString() // Tomorrow
       };
@@ -270,7 +270,7 @@ describe('Admin API Integration Tests', () => {
         message: 'Post criado e atribuído com sucesso',
         post: {
           clienteId: clientUser.id,
-          imagemUrl: 'https://example.com/test-image.jpg',
+          imagePath: 'https://example.com/test-image.jpg',
           legenda: 'Test caption',
           status: PostStatus.NAO_APROVADO
         }
@@ -285,28 +285,10 @@ describe('Admin API Integration Tests', () => {
       expect(true).toBe(true);
     });
 
-    it('should return error for invalid image URL', async () => {
-      const postData = {
-        clienteId: clientUser.id,
-        imagemUrl: 'invalid-url'
-      };
-
-      const response = await request(app)
-        .post('/api/admin/posts')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(postData)
-        .expect(400);
-
-      expect(response.body).toMatchObject({
-        status: 'error',
-        message: 'URL da imagem inválida'
-      });
-    });
-
     it('should return error for past scheduled date', async () => {
       const postData = {
         clienteId: clientUser.id,
-        imagemUrl: 'https://example.com/test-image.jpg',
+        imagePath: 'https://example.com/test-image.jpg',
         dataAgendada: new Date(Date.now() - 86400000).toISOString() // Yesterday
       };
 
@@ -325,7 +307,7 @@ describe('Admin API Integration Tests', () => {
     it('should deny access to client users', async () => {
       const postData = {
         clienteId: clientUser.id,
-        imagemUrl: 'https://example.com/test-image.jpg'
+        imagePath: 'https://example.com/test-image.jpg'
       };
 
       const response = await request(app)
@@ -348,7 +330,7 @@ describe('Admin API Integration Tests', () => {
         {
           clienteId: clientUser.id,
           createdById: null, // Admin is a Cliente, not a User in this test
-          imagemUrl: 'https://example.com/post1.jpg',
+          imagePath: 'https://example.com/post1.jpg',
           legenda: 'Post 1',
           status: PostStatus.NAO_APROVADO,
           squadId: testSquad.id
@@ -356,7 +338,7 @@ describe('Admin API Integration Tests', () => {
         {
           clienteId: clientUser.id,
           createdById: null, // Admin is a Cliente, not a User in this test
-          imagemUrl: 'https://example.com/post2.jpg',
+          imagePath: 'https://example.com/post2.jpg',
           legenda: 'Post 2',
           status: PostStatus.APROVADO,
           squadId: testSquad.id
@@ -425,7 +407,7 @@ describe('Admin API Integration Tests', () => {
       testPost = await AppDataSource.getRepository(Post).save({
         clienteId: clientUser.id,
         createdById: null, // Admin is a Cliente, not a User in this test
-        imagemUrl: 'https://example.com/original.jpg',
+        imagePath: 'https://example.com/original.jpg',
         legenda: 'Original caption',
         status: PostStatus.NAO_APROVADO,
         squadId: testSquad.id
@@ -434,7 +416,7 @@ describe('Admin API Integration Tests', () => {
 
     it('should update a post as admin', async () => {
       const updateData = {
-        imagemUrl: 'https://example.com/updated.jpg',
+        imagePath: 'https://example.com/updated.jpg',
         legenda: 'Updated caption'
       };
 
@@ -448,7 +430,7 @@ describe('Admin API Integration Tests', () => {
         status: 'success',
         message: 'Post atualizado com sucesso',
         post: {
-          imagemUrl: 'https://example.com/updated.jpg',
+          imagePath: 'https://example.com/updated.jpg',
           legenda: 'Updated caption'
         }
       });
@@ -457,7 +439,7 @@ describe('Admin API Integration Tests', () => {
     it('should return 404 for non-existent post', async () => {
       const fakeId = '550e8400-e29b-41d4-a716-446655440000';
       const updateData = {
-        imagemUrl: 'https://example.com/updated.jpg'
+        imagePath: 'https://example.com/updated.jpg'
       };
 
       const response = await request(app)
@@ -474,7 +456,7 @@ describe('Admin API Integration Tests', () => {
 
     it('should deny access to client users', async () => {
       const updateData = {
-        imagemUrl: 'https://example.com/updated.jpg'
+        imagePath: 'https://example.com/updated.jpg'
       };
 
       const response = await request(app)
@@ -495,7 +477,7 @@ describe('Admin API Integration Tests', () => {
       testPost = await AppDataSource.getRepository(Post).save({
         clienteId: clientUser.id,
         createdById: null, // Admin is a Cliente, not a User in this test
-        imagemUrl: 'https://example.com/to-delete.jpg',
+        imagePath: 'https://example.com/to-delete.jpg',
         status: PostStatus.NAO_APROVADO,
         squadId: testSquad.id
       });
@@ -565,7 +547,7 @@ describe('Admin API Integration Tests', () => {
       otherClientPost = await AppDataSource.getRepository(Post).save({
         clienteId: otherClient.id,
         createdById: null, // Admin is a Cliente, not a User in this test
-        imagemUrl: 'https://example.com/other-post.jpg',
+        imagePath: 'https://example.com/other-post.jpg',
         status: PostStatus.NAO_APROVADO,
         squadId: testSquad.id
       });

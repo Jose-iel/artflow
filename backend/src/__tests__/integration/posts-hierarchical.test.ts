@@ -87,7 +87,7 @@ describe('Posts API Hierarchical Tests', () => {
       clienteId: cliente.id,
       squadId: testSquad.id,
       createdById: funcionario.id,
-      imagemUrl: 'https://example.com/post1.jpg',
+      imagePath: 'https://example.com/post1.jpg',
       legenda: 'Post from test squad',
       status: PostStatus.NAO_APROVADO,
       dataAgendada: new Date('2025-12-15T10:00:00Z')
@@ -97,7 +97,7 @@ describe('Posts API Hierarchical Tests', () => {
       clienteId: cliente.id,
       squadId: otherSquad.id,
       createdById: adminMaster.id,
-      imagemUrl: 'https://example.com/post2.jpg',
+      imagePath: 'https://example.com/post2.jpg',
       legenda: 'Post from other squad',
       status: PostStatus.APROVADO,
       dataAgendada: new Date('2025-12-20T10:00:00Z')
@@ -236,7 +236,7 @@ describe('Posts API Hierarchical Tests', () => {
       futureDate.setMonth(futureDate.getMonth() + 1);
       
       const newPost = {
-        imagemUrl: 'https://example.com/new.jpg',
+        imagePath: 'https://example.com/new.jpg',
         legenda: 'New post by admin',
         dataAgendada: futureDate.toISOString(),
         clienteId: cliente.id
@@ -260,7 +260,7 @@ describe('Posts API Hierarchical Tests', () => {
       futureDate.setMonth(futureDate.getMonth() + 1);
       
       const newPost = {
-        imagemUrl: 'https://example.com/new.jpg',
+        imagePath: 'https://example.com/new.jpg',
         legenda: 'New post by funcionario',
         dataAgendada: futureDate.toISOString(),
         clienteId: cliente.id
@@ -278,7 +278,7 @@ describe('Posts API Hierarchical Tests', () => {
 
     it('should create post for cliente (self)', async () => {
       const newPost = {
-        imagemUrl: 'https://example.com/new.jpg',
+        imagePath: 'https://example.com/new.jpg',
         legenda: 'New post by cliente'
       };
 
@@ -306,7 +306,7 @@ describe('Posts API Hierarchical Tests', () => {
         .post('/api/posts')
         .set('Authorization', `Bearer ${funcionarioToken}`)
         .send({
-          imagemUrl: 'https://example.com/new.jpg',
+          imagePath: 'https://example.com/new.jpg',
           clienteId: otherCliente.id
         })
         .expect(403);
@@ -326,21 +326,7 @@ describe('Posts API Hierarchical Tests', () => {
         .expect(400);
 
       expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('URL da imagem é obrigatória');
-    });
-
-    it('should validate image URL format', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', `Bearer ${adminMasterToken}`)
-        .send({
-          imagemUrl: 'not-a-url',
-          clienteId: cliente.id
-        })
-        .expect(400);
-
-      expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('URL da imagem inválida');
+      expect(response.body.message).toBe('Caminho da imagem é obrigatório');
     });
   });
 
