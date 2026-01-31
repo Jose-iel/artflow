@@ -6,6 +6,7 @@ import { Post, PostStatus } from '../entities/Post';
 import { AuthRequest } from '../middlewares/auth';
 import { Not } from 'typeorm';
 import bcrypt from 'bcrypt';
+import { UploadService } from '../services/upload.service';
 
 // DTOs for Admin operations
 interface CreateClientDto {
@@ -599,6 +600,13 @@ export class AdminController {
         });
       }
 
+      // Deletar o arquivo físico antes de deletar o post do banco
+      if (post.imagePath) {
+        const uploadService = new UploadService();
+        await uploadService.deleteFile(post.imagePath);
+      }
+
+      // Deletar o post do banco de dados
       await this.postRepository.delete(id);
 
       return res.json({
@@ -606,6 +614,7 @@ export class AdminController {
         message: 'Post deletado com sucesso'
       });
     } catch (error) {
+      console.error('Erro ao deletar post:', error);
       return res.status(500).json({
         status: 'error',
         message: 'Erro ao deletar post'

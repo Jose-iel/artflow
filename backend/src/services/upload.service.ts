@@ -101,4 +101,40 @@ export class UploadService {
       })
     })
   }
+
+  /**
+   * Deleta um arquivo do filesystem
+   * @param filePath - Caminho relativo do arquivo (ex: empresa-1/client-1/images/file.jpg)
+   * @returns Promise<void>
+   */
+  async deleteFile(filePath: string): Promise<void> {
+    try {
+      if (!filePath) {
+        console.warn('deleteFile: filePath vazio, nada a deletar')
+        return
+      }
+
+      const absoluteUploadDir = path.resolve(this.uploadDir)
+      const absoluteFilePath = path.resolve(this.uploadDir, filePath)
+
+      // SEGURANÇA: Validar que o arquivo está dentro do diretório de uploads
+      this.validator.validatePath(absoluteFilePath, absoluteUploadDir)
+
+      // Verificar se o arquivo existe antes de tentar deletar
+      try {
+        await fs.access(absoluteFilePath)
+      } catch {
+        console.warn(`deleteFile: Arquivo não encontrado: ${filePath}`)
+        return // Arquivo não existe, não precisa deletar
+      }
+
+      // Deletar o arquivo
+      await fs.unlink(absoluteFilePath)
+      console.log(`Arquivo deletado com sucesso: ${filePath}`)
+    } catch (error) {
+      console.error(`Erro ao deletar arquivo ${filePath}:`, error)
+      // Não lançar erro para não bloquear a deleção do post
+      // O arquivo pode já ter sido deletado ou não existir mais
+    }
+  }
 }

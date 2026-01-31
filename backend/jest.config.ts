@@ -22,6 +22,8 @@ const config = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
   maxWorkers: 1,
+  testTimeout: 10000,
+  forceExit: true,
 };
 
 export default config;

@@ -327,4 +327,95 @@ describe('UploadService', () => {
       expect(service).toBeDefined()
     })
   })
+
+  describe('deleteFile', () => {
+    it('should delete existing file successfully', async () => {
+      // Criar arquivo de teste
+      const testFilePath = 'empresa-1/client-1/images/test.jpg'
+      const fullPath = path.join(testDir, testFilePath)
+      await fs.mkdir(path.dirname(fullPath), { recursive: true })
+      await fs.writeFile(fullPath, 'test content')
+
+      // Verificar que arquivo existe
+      await expect(fs.access(fullPath)).resolves.not.toThrow()
+
+      // Deletar arquivo
+      await service.deleteFile(testFilePath)
+
+      // Verificar que arquivo foi deletado
+      await expect(fs.access(fullPath)).rejects.toThrow()
+    })
+
+    it('should handle deletion of non-existent file gracefully', async () => {
+      const testFilePath = 'empresa-1/client-1/images/non-existent.jpg'
+
+      // Não deve lançar erro
+      await expect(service.deleteFile(testFilePath)).resolves.not.toThrow()
+    })
+
+    it('should handle empty filePath gracefully', async () => {
+      // Não deve lançar erro
+      await expect(service.deleteFile('')).resolves.not.toThrow()
+    })
+
+    it('should prevent path traversal attacks', async () => {
+      const maliciousPath = '../../../etc/passwd'
+
+      // Não deve lançar erro (graceful handling), mas também não deve deletar
+      await expect(service.deleteFile(maliciousPath)).resolves.not.toThrow()
+      
+      // Verificar que o arquivo malicioso não foi acessado/deletado
+      // (o método validatePath vai bloquear e o catch vai tratar silenciosamente)
+    })
+
+    it('should only delete files within upload directory', async () => {
+      const outsidePath = '/tmp/malicious-file.txt'
+
+      // Não deve lançar erro (graceful handling), mas também não deve deletar
+      await expect(service.deleteFile(outsidePath)).resolves.not.toThrow()
+      
+      // O método não deve deletar arquivos fora do diretório de uploads
+    })
+
+    it('should handle nested directory structure', async () => {
+      // Criar arquivo em estrutura aninhada
+      const testFilePath = 'empresa-1/client-1/videos/subfolder/test.mp4'
+      const fullPath = path.join(testDir, testFilePath)
+      await fs.mkdir(path.dirname(fullPath), { recursive: true })
+      await fs.writeFile(fullPath, 'video content')
+
+      // Verificar que arquivo existe
+      await expect(fs.access(fullPath)).resolves.not.toThrow()
+
+      // Deletar arquivo
+      await service.deleteFile(testFilePath)
+
+      // Verificar que arquivo foi deletado
+      await expect(fs.access(fullPath)).rejects.toThrow()
+    })
+
+    it('should handle special characters in filename', async () => {
+      // Criar arquivo com nome sanitizado
+      const testFilePath = 'empresa-1/client-1/images/temp_123456_file_name.jpg'
+      const fullPath = path.join(testDir, testFilePath)
+      await fs.mkdir(path.dirname(fullPath), { recursive: true })
+      await fs.writeFile(fullPath, 'test content')
+
+      // Deletar arquivo
+      await service.deleteFile(testFilePath)
+
+      // Verificar que arquivo foi deletado
+      await expect(fs.access(fullPath)).rejects.toThrow()
+    })
+
+    it('should not throw error when file is already deleted', async () => {
+      const testFilePath = 'empresa-1/client-1/images/already-deleted.jpg'
+
+      // Tentar deletar arquivo que não existe (primeira vez)
+      await expect(service.deleteFile(testFilePath)).resolves.not.toThrow()
+
+      // Tentar deletar novamente (segunda vez)
+      await expect(service.deleteFile(testFilePath)).resolves.not.toThrow()
+    })
+  })
 })

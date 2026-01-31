@@ -3,6 +3,7 @@ import { Post } from '../entities/Post'
 import fs from 'fs/promises'
 import path from 'path'
 import cron from 'node-cron'
+import { UploadService } from './upload.service'
 
 export class CleanupService {
   private uploadDir: string
@@ -67,16 +68,11 @@ export class CleanupService {
 
       console.log(`Encontrados ${oldPosts.length} posts para limpar`)
 
-      // Remove arquivos físicos
+      // Remove arquivos físicos usando UploadService
+      const uploadService = new UploadService()
       for (const post of oldPosts) {
         if (post.imagePath) {
-          try {
-            const filePath = path.join(this.uploadDir, post.imagePath)
-            await fs.unlink(filePath)
-            console.log(`Arquivo removido: ${filePath}`)
-          } catch (error) {
-            console.error(`Erro ao remover arquivo ${post.imagePath}:`, error)
-          }
+          await uploadService.deleteFile(post.imagePath)
         }
       }
 
@@ -138,14 +134,9 @@ export class CleanupService {
   async cleanupOrphanedFiles() {
     const orphanedFiles = await this.checkOrphanedFiles()
     
+    const uploadService = new UploadService()
     for (const file of orphanedFiles) {
-      try {
-        const filePath = path.join(this.uploadDir, file)
-        await fs.unlink(filePath)
-        console.log(`Arquivo órfão removido: ${file}`)
-      } catch (error) {
-        console.error(`Erro ao remover arquivo órfão ${file}:`, error)
-      }
+      await uploadService.deleteFile(file)
     }
     
     console.log(`${orphanedFiles.length} arquivos órfãos removidos`)

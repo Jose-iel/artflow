@@ -8,6 +8,8 @@ import { Squad } from '../../entities/Squad';
 import { app } from '../../app';
 import jwt from 'jsonwebtoken';
 import { clearTestDb } from '../helpers/testDb';
+import fs from 'fs/promises';
+import path from 'path';
 
 describe('Admin API Integration Tests', () => {
   let adminToken: string;
@@ -23,7 +25,27 @@ describe('Admin API Integration Tests', () => {
   });
 
   afterAll(async () => {
+    // Limpar diretório de uploads de teste
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+    try {
+      await fs.rm(uploadDir, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore cleanup errors
+    }
     await AppDataSource.destroy();
+  });
+
+  afterEach(async () => {
+    // Limpar arquivos de teste criados durante os testes
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+    try {
+      const empresaDir = path.join(uploadDir, 'empresa-1');
+      if (await fs.access(empresaDir).then(() => true).catch(() => false)) {
+        await fs.rm(empresaDir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   });
 
   beforeEach(async () => {
@@ -473,6 +495,8 @@ describe('Admin API Integration Tests', () => {
   });
 
   describe('DELETE /api/admin/posts/:id', () => {
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+
     beforeEach(async () => {
       testPost = await AppDataSource.getRepository(Post).save({
         clienteId: clientUser.id,
@@ -499,6 +523,97 @@ describe('Admin API Integration Tests', () => {
         where: { id: testPost.id }
       });
       expect(deletedPost).toBeNull();
+    });
+
+    it('should delete physical file when deleting post', async () => {
+      // Criar arquivo físico de teste
+      const testFilePath = 'empresa-1/client-1/images/test-delete.jpg';
+      const fullPath = path.join(uploadDir, testFilePath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, 'test image content');
+
+      // Criar post com referência ao arquivo
+      const postWithFile = await AppDataSource.getRepository(Post).save({
+        clienteId: clientUser.id,
+        createdById: null,
+        imagePath: testFilePath,
+        status: PostStatus.NAO_APROVADO,
+        squadId: testSquad.id
+      });
+
+      // Verificar que arquivo existe
+      await expect(fs.access(fullPath)).resolves.not.toThrow();
+
+      // Deletar post
+      const response = await request(app)
+        .delete(`/api/admin/posts/${postWithFile.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'success',
+        message: 'Post deletado com sucesso'
+      });
+
+      // Verificar que arquivo foi deletado
+      await expect(fs.access(fullPath)).rejects.toThrow();
+    });
+
+    it('should delete post even if physical file does not exist', async () => {
+      // Criar post com referência a arquivo inexistente
+      const postWithMissingFile = await AppDataSource.getRepository(Post).save({
+        clienteId: clientUser.id,
+        createdById: null,
+        imagePath: 'empresa-1/client-1/images/non-existent.jpg',
+        status: PostStatus.NAO_APROVADO,
+        squadId: testSquad.id
+      });
+
+      // Deletar post (não deve falhar mesmo sem arquivo físico)
+      const response = await request(app)
+        .delete(`/api/admin/posts/${postWithMissingFile.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'success',
+        message: 'Post deletado com sucesso'
+      });
+
+      // Verificar que post foi deletado
+      const deletedPost = await AppDataSource.getRepository(Post).findOne({
+        where: { id: postWithMissingFile.id }
+      });
+      expect(deletedPost).toBeNull();
+    });
+
+    it('should delete video file when deleting post', async () => {
+      // Criar arquivo de vídeo de teste
+      const testVideoPath = 'empresa-1/client-1/videos/test-video.mp4';
+      const fullPath = path.join(uploadDir, testVideoPath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, 'test video content');
+
+      // Criar post com referência ao vídeo
+      const postWithVideo = await AppDataSource.getRepository(Post).save({
+        clienteId: clientUser.id,
+        createdById: null,
+        imagePath: testVideoPath,
+        status: PostStatus.NAO_APROVADO,
+        squadId: testSquad.id
+      });
+
+      // Verificar que arquivo existe
+      await expect(fs.access(fullPath)).resolves.not.toThrow();
+
+      // Deletar post
+      await request(app)
+        .delete(`/api/admin/posts/${postWithVideo.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // Verificar que vídeo foi deletado
+      await expect(fs.access(fullPath)).rejects.toThrow();
     });
 
     it('should return 404 for non-existent post', async () => {

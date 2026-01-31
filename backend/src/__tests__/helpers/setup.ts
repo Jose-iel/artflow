@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { AppDataSource } from '../../config/data-source';
 
 // Load test environment variables
 dotenv.config({ path: '.env.test' });
@@ -17,3 +18,10 @@ process.env.DB_DATABASE = process.env.TEST_DB_DATABASE || 'artflow_test';
 
 // Increase timeout for integration tests
 jest.setTimeout(30000);
+
+// Global teardown - garantir que todas as conexões sejam fechadas
+afterAll(async () => {
+  if (AppDataSource.isInitialized) {
+    await AppDataSource.destroy();
+  }
+});
