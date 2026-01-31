@@ -28,7 +28,7 @@ describe('PostForm Component', () => {
       render(<PostForm isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} />)
 
       expect(screen.getByLabelText(/cliente/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/url da mídia/i)).toBeInTheDocument()
+      expect(screen.getByText(/arquivo de mídia/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/legenda do post/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/data de agendamento/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/status do post/i)).toBeInTheDocument()
@@ -46,7 +46,7 @@ describe('PostForm Component', () => {
 
   describe('Edit Mode', () => {
     const mockPost = {
-      imagemUrl: 'https://example.com/test.jpg',
+      imagePath: 'empresa-1/client-1/images/test.jpg',
       legenda: 'Post de Teste',
       dataAgendada: '2024-01-01T10:00',
       clienteId: 'client-1',
@@ -57,7 +57,6 @@ describe('PostForm Component', () => {
     it('should render edit form with existing post data', () => {
       render(<PostForm initialData={mockPost} isFuncionario={true} clients={mockClients} isEditing={true} />)
 
-      expect(screen.getByDisplayValue('https://example.com/test.jpg')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Post de Teste')).toBeInTheDocument()
       expect(screen.getByDisplayValue('2024-01-01T10:00')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /salvar alterações/i })).toBeInTheDocument()
@@ -67,11 +66,9 @@ describe('PostForm Component', () => {
     it('should pre-fill form fields with post data', () => {
       render(<PostForm initialData={mockPost} isFuncionario={true} clients={mockClients} isEditing={true} />)
 
-      const imageInput = screen.getByLabelText(/url da mídia/i)
       const legendaInput = screen.getByLabelText(/legenda do post/i)
       const dataInput = screen.getByLabelText(/data de agendamento/i)
 
-      expect(imageInput).toHaveValue('https://example.com/test.jpg')
       expect(legendaInput).toHaveValue('Post de Teste')
       expect(dataInput).toHaveValue('2024-01-01T10:00')
     })
@@ -84,7 +81,7 @@ describe('PostForm Component', () => {
   })
 
   describe('Form Validation', () => {
-    it('should show validation error for missing URL', async () => {
+    it('should show validation error for missing file', async () => {
       const mockSubmit = vi.fn()
       render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
       
@@ -92,30 +89,26 @@ describe('PostForm Component', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/url da imagem é obrigatória/i)).toBeInTheDocument()
+        expect(screen.getByText(/arquivo de mídia é obrigatório/i)).toBeInTheDocument()
       })
       expect(mockSubmit).not.toHaveBeenCalled()
     })
 
-    it('should accept valid URL format', async () => {
+    it('should render file upload component', async () => {
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
       render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
       
-      const imageInput = screen.getByLabelText(/url da mídia/i)
+      const fileUploadLabel = screen.getByText(/arquivo de mídia/i)
       const clientSelect = screen.getByLabelText(/cliente/i)
       
       fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(imageInput, { target: { value: 'https://example.com/image.jpg' } })
       
-      expect(imageInput).toHaveValue('https://example.com/image.jpg')
+      expect(fileUploadLabel).toBeInTheDocument()
     })
 
     it('should show validation error when cliente not selected', async () => {
       const mockSubmit = vi.fn()
       render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
-      
-      const imageInput = screen.getByLabelText(/url da mídia/i)
-      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
       
       const submitButton = screen.getByRole('button', { name: /criar post/i })
       fireEvent.click(submitButton)
@@ -129,9 +122,6 @@ describe('PostForm Component', () => {
       const mockSubmit = vi.fn()
       render(<PostForm onSubmit={mockSubmit} isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} />)
       
-      const imageInput = screen.getByLabelText(/url da mídia/i)
-      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
-      
       const submitButton = screen.getByRole('button', { name: /criar post/i })
       fireEvent.click(submitButton)
 
@@ -144,22 +134,24 @@ describe('PostForm Component', () => {
   describe('Form Submission', () => {
     it('should submit form with valid data for funcionario', async () => {
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
-      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} />)
+      const mockPost = {
+        imagePath: 'empresa-1/client-1/images/test.jpg',
+        legenda: 'Legenda teste',
+        dataAgendada: null,
+        clienteId: 'client-1',
+        squadId: 'squad-1',
+        status: 'Não aprovado'
+      }
       
-      const clientSelect = screen.getByLabelText(/cliente/i)
-      const imageInput = screen.getByLabelText(/url da mídia/i)
-      const legendaInput = screen.getByLabelText(/legenda do post/i)
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} initialData={mockPost} />)
+      
       const submitButton = screen.getByRole('button', { name: /criar post/i })
-
-      fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
-      fireEvent.change(legendaInput, { target: { value: 'Legenda teste' } })
       fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(mockSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
-            imagemUrl: 'https://example.com/test.jpg',
+            imagePath: 'empresa-1/client-1/images/test.jpg',
             legenda: 'Legenda teste',
             clienteId: 'client-1',
             squadId: 'squad-1'
@@ -171,7 +163,16 @@ describe('PostForm Component', () => {
     it('should submit form with empresa and squad for admin master', async () => {
       const user = userEvent.setup()
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
-      render(<PostForm onSubmit={mockSubmit} isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} />)
+      const mockPost = {
+        imagePath: 'empresa-1/client-1/images/test.jpg',
+        legenda: '',
+        dataAgendada: null,
+        clienteId: 'client-1',
+        squadId: 'squad-1',
+        status: 'Não aprovado'
+      }
+      
+      render(<PostForm onSubmit={mockSubmit} isAdminMaster={true} empresas={mockEmpresas} squads={mockSquads} clients={mockClients} initialData={mockPost} />)
       
       const empresaSelect = screen.getByLabelText(/empresa/i)
       await user.selectOptions(empresaSelect, 'empresa-1')
@@ -182,16 +183,13 @@ describe('PostForm Component', () => {
       const clientSelect = screen.getByLabelText(/cliente/i)
       await user.selectOptions(clientSelect, 'client-1')
       
-      const imageInput = screen.getByLabelText(/url da mídia/i)
-      await user.type(imageInput, 'https://example.com/test.jpg')
-      
       const submitButton = screen.getByRole('button', { name: /criar post/i })
       await user.click(submitButton)
 
       await waitFor(() => {
         expect(mockSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
-            imagemUrl: 'https://example.com/test.jpg',
+            imagePath: 'empresa-1/client-1/images/test.jpg',
             clienteId: 'client-1',
             squadId: 'squad-1'
           })
@@ -201,14 +199,18 @@ describe('PostForm Component', () => {
 
     it('should handle submission errors gracefully', async () => {
       const mockSubmit = vi.fn().mockRejectedValue(new Error('Erro ao criar post'))
-      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
+      const mockPost = {
+        imagePath: 'empresa-1/client-1/images/test.jpg',
+        legenda: '',
+        dataAgendada: null,
+        clienteId: 'client-1',
+        squadId: 'squad-1',
+        status: 'Não aprovado'
+      }
       
-      const clientSelect = screen.getByLabelText(/cliente/i)
-      const imageInput = screen.getByLabelText(/url da mídia/i)
+      render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} initialData={mockPost} />)
+      
       const submitButton = screen.getByRole('button', { name: /criar post/i })
-
-      fireEvent.change(clientSelect, { target: { value: 'client-1' } })
-      fireEvent.change(imageInput, { target: { value: 'https://example.com/test.jpg' } })
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -238,7 +240,7 @@ describe('PostForm Component', () => {
     it('should show delete button in edit mode', () => {
       const mockDelete = vi.fn()
       const mockPost = {
-        imagemUrl: 'https://example.com/test.jpg',
+        imagePath: 'empresa-1/client-1/images/test.jpg',
         legenda: 'Test',
         dataAgendada: null,
         clienteId: 'client-1'
@@ -252,7 +254,7 @@ describe('PostForm Component', () => {
     it('should toggle preview mode between post and story', () => {
       render(<PostForm isFuncionario={true} clients={mockClients} />)
 
-      const storyButton = screen.getByRole('button', { name: /story.*reels/i })
+      const storyButton = screen.getByRole('button', { name: /reels\/stories/i })
       fireEvent.click(storyButton)
 
       expect(storyButton).toHaveClass('bg-white')

@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 describe('PostModal Component', () => {
   const mockPost = {
     id: '1',
-    imagemUrl: 'https://drive.google.com/file/d/ABC123/view',
+    imagePath: 'empresa-1/client-1/images/test.jpg',
     legenda: 'Test post',
     dataAgendada: null,
     status: 'Pendente',
@@ -29,7 +29,7 @@ describe('PostModal Component', () => {
     }
   })
 
-  it('should render mobile image with referrerPolicy="no-referrer"', () => {
+  it('should render mobile image with correct src path', () => {
     render(
       <PostModal
         post={mockPost}
@@ -42,12 +42,12 @@ describe('PostModal Component', () => {
     // Busca todas as imagens renderizadas
     const images = screen.getAllByRole('img')
     
-    // Verifica que pelo menos uma imagem tem referrerPolicy="no-referrer"
-    const hasReferrerPolicy = images.some(
-      (img) => img.getAttribute('referrerpolicy') === 'no-referrer'
+    // Verifica que pelo menos uma imagem tem o src correto
+    const hasCorrectSrc = images.some(
+      (img) => img.getAttribute('src')?.includes('/uploads/')
     )
     
-    expect(hasReferrerPolicy).toBe(true)
+    expect(hasCorrectSrc).toBe(true)
   })
 
   it('should render mobile actions container with safe-area padding', () => {
