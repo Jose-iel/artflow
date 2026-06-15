@@ -84,8 +84,7 @@ CREATE TABLE IF NOT EXISTS posts (
     created_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
     data_postagem TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     data_agendada TIMESTAMP WITH TIME ZONE,
-    imagem_url TEXT CHECK (imagem_url ~* '^https?://.+'),
-    image_path TEXT,
+    image_path TEXT NOT NULL DEFAULT '',
     legenda TEXT,
     status TEXT NOT NULL 
         DEFAULT 'Não aprovado' 
@@ -279,16 +278,16 @@ BEGIN
     ) INTO v_cliente_c_id;
     
     -- Adiciona posts criados pelos funcionários para os clientes
-    INSERT INTO posts (cliente_id, squad_id, created_by_id, data_postagem, data_agendada, imagem_url, legenda, status, comentario_cliente)
+    INSERT INTO posts (cliente_id, squad_id, created_by_id, data_postagem, data_agendada, image_path, legenda, status, comentario_cliente)
     VALUES 
-        (v_cliente_a_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '3 days', 'https://picsum.photos/seed/post1/400/400', 'Post para Cliente A - Campanha de marketing digital com foco em redes sociais e engajamento do público-alvo', 'Não aprovado', 'Precisa ajustar as cores, não está de acordo com a identidade visual da marca'),
-        (v_cliente_b_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '5 days', 'https://picsum.photos/seed/post2/400/400', 'Post para Cliente B - Lançamento de produto novo', 'Aprovado', NULL),
-        (v_cliente_c_id, v_squad_design_id, v_funcionario_maria_id, CURRENT_TIMESTAMP + INTERVAL '2 days', CURRENT_TIMESTAMP + INTERVAL '7 days', 'https://picsum.photos/seed/post3/400/400', 'Post para Cliente C - Design institucional', 'Agendado', NULL);
+        (v_cliente_a_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '3 days', 'uploads/placeholder.jpg', 'Post para Cliente A - Campanha de marketing digital com foco em redes sociais e engajamento do público-alvo', 'Não aprovado', 'Precisa ajustar as cores, não está de acordo com a identidade visual da marca'),
+        (v_cliente_b_id, v_squad_marketing_id, v_funcionario_joao_id, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '5 days', 'uploads/placeholder.jpg', 'Post para Cliente B - Lançamento de produto novo', 'Aprovado', NULL),
+        (v_cliente_c_id, v_squad_design_id, v_funcionario_maria_id, CURRENT_TIMESTAMP + INTERVAL '2 days', CURRENT_TIMESTAMP + INTERVAL '7 days', 'uploads/placeholder.jpg', 'Post para Cliente C - Design institucional', 'Agendado', NULL);
     
     -- Adiciona posts criados pelos próprios clientes (para testes)
-    INSERT INTO posts (cliente_id, squad_id, data_postagem, data_agendada, imagem_url, legenda, status, comentario_cliente)
+    INSERT INTO posts (cliente_id, squad_id, data_postagem, data_agendada, image_path, legenda, status, comentario_cliente)
     VALUES 
-        (v_cliente_a_id, v_squad_marketing_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '10 days', 'https://picsum.photos/seed/post4/400/400', 'Post criado pelo Cliente A - Promoção especial de fim de ano com descontos exclusivos para clientes fiéis', 'Não aprovado', 'A imagem precisa ter mais destaque para o desconto');
+        (v_cliente_a_id, v_squad_marketing_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '10 days', 'uploads/placeholder.jpg', 'Post criado pelo Cliente A - Promoção especial de fim de ano com descontos exclusivos para clientes fiéis', 'Não aprovado', 'A imagem precisa ter mais destaque para o desconto');
     
     RAISE NOTICE 'Dados iniciais criados com sucesso';
     RAISE NOTICE 'Admin Master: admin@artflow.com (senha: senha123)';
