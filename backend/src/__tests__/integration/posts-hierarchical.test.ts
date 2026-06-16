@@ -326,7 +326,7 @@ describe('Posts API Hierarchical Tests', () => {
         .expect(400);
 
       expect(response.body.status).toBe('error');
-      expect(response.body.message).toBe('Caminho da imagem é obrigatório');
+      expect(response.body.message).toBe('Caminho da imagem ou media carousel é obrigatório');
     });
   });
 
