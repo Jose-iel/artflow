@@ -264,6 +264,42 @@ Total: ~83 kB
 4. **Monitoramento** e logging
 5. **CI/CD pipeline** para builds automatizados
 
+### **Database Migrations em Produção**
+
+O projeto utiliza um sistema de migrations versionadas para alterações de schema:
+
+- **Migrations versionadas:** `database/migrations/XXX_nome.sql` (ex: `001_add_media_carousel.sql`)
+- **Migrations legadas:** Scripts sem prefixo numérico (ignoradas pelo runner automático)
+
+#### **Processo de Deploy com Migrations**
+
+O pipeline de produção (`.github/workflows/deploy-production.yaml`) executa automaticamente:
+
+1. **Build e deploy** dos containers via Docker Compose
+2. **Aplicação de migrations** via `scripts/run-migrations.sh`
+3. **Health checks** para validar serviços
+
+#### **Runner de Migrations**
+
+O script `scripts/run-migrations.sh` aplica migrations de forma segura:
+
+- ✅ **Idempotente:** Pode ser executado múltiplas vezes
+- ✅ **Seguro:** Apenas migrations versionadas (prefixo numérico)
+- ✅ **Não destrutivo:** Não altera dados existentes
+- ✅ **Rollback automático:** Desfaz alterações em caso de erro
+
+#### **Criando Novas Migrations**
+
+```bash
+# Criar nova migration (sempre com prefixo numérico)
+touch database/migrations/002_nome_descritivo.sql
+```
+
+Requisitos:
+- **Idempotência:** Usar `IF NOT EXISTS` para criações
+- **Segurança:** Nunca alterar dados existentes sem guardas
+- **Rollback:** Incluir comandos de desfazimento
+
 ### **Variáveis de Produção**
 ```env
 # Backend

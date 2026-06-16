@@ -148,6 +148,12 @@ jobs:
             echo "⏳ Waiting for services to start..."
             sleep 15
             
+            echo "🗄️  Applying database migrations..."
+            COMPOSE_FILE=docker/docker-compose.prod.yaml \
+            DB_SERVICE=db \
+            DB_NAME=artflow_prod \
+              bash scripts/run-migrations.sh
+            
             echo "🏥 Health check..."
             if curl -f http://localhost:3333/api/health; then
               echo "✅ Backend is healthy!"

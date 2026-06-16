@@ -4,7 +4,7 @@
 -- Description: Adds JSONB column to store multiple media items for carousel functionality
 
 -- Step 1: Add new column for media carousel (JSONB array)
-ALTER TABLE posts ADD COLUMN media JSONB NULL;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS media JSONB NULL;
 
 -- Step 2: Make image_path nullable to support pure carousel posts
 -- Posts with single image will still use image_path for backward compatibility
