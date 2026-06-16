@@ -7,6 +7,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { Not } from 'typeorm';
 import bcrypt from 'bcrypt';
 import { UploadService } from '../services/upload.service';
+import { MediaItem } from '../dtos/post.dto';
 
 // DTOs for Admin operations
 interface CreateClientDto {
@@ -17,13 +18,15 @@ interface CreateClientDto {
 
 interface CreatePostForClientDto {
   clienteId: string;
-  imagePath: string;
+  imagePath?: string;
+  media?: MediaItem[];
   legenda?: string;
   dataAgendada?: Date;
 }
 
 interface UpdatePostDto {
   imagePath?: string;
+  media?: MediaItem[];
   legenda?: string;
   dataAgendada?: Date;
   status?: PostStatus;
@@ -350,7 +353,7 @@ export class AdminController {
 
   async createPostForClient(req: AuthRequest, res: Response) {
     try {
-      const { clienteId, imagePath, legenda, dataAgendada }: CreatePostForClientDto = req.body;
+      const { clienteId, imagePath, media, legenda, dataAgendada }: CreatePostForClientDto = req.body;
 
       // Validations
       if (!clienteId) {
@@ -360,10 +363,10 @@ export class AdminController {
         });
       }
 
-      if (!imagePath || !imagePath.trim()) {
+      if (!imagePath && (!media || media.length === 0)) {
         return res.status(400).json({
           status: 'error',
-          message: 'Caminho da imagem é obrigatório'
+          message: 'Caminho da imagem ou media carousel é obrigatório'
         });
       }
 
@@ -386,16 +389,27 @@ export class AdminController {
         });
       }
 
-      // Create post
-      const newPost = this.postRepository.create({
+      // Create post with support for both legacy and carousel modes
+      const newPostData: Partial<Post> = {
         clienteId,
         createdById: req.user!.id, // Admin who created the post
-        imagePath: imagePath.trim(),
         legenda: legenda?.trim() || null,
         dataAgendada: dataAgendada || null,
         status: PostStatus.NAO_APROVADO,
         squadId: client.squadId || req.user!.squadId
-      });
+      };
+
+      if (media && media.length > 0) {
+        // Carousel mode
+        newPostData.media = media;
+        newPostData.imagePath = media[0].filePath;
+      } else if (imagePath) {
+        // Legacy mode
+        newPostData.imagePath = imagePath.trim();
+        newPostData.media = null;
+      }
+
+      const newPost = this.postRepository.create(newPostData);
 
       const savedPost = await this.postRepository.save(newPost);
 
@@ -526,7 +540,7 @@ export class AdminController {
   async updatePost(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { imagePath, legenda, dataAgendada, status }: UpdatePostDto = req.body;
+      const { imagePath, media, legenda, dataAgendada, status }: UpdatePostDto = req.body;
 
       const post = await this.postRepository.findOne({
         where: { id },
@@ -541,8 +555,14 @@ export class AdminController {
       }
 
       // Update fields if provided
-      if (imagePath) {
+      if (media && media.length > 0) {
+        // Update to carousel mode
+        post.media = media;
+        post.imagePath = media[0].filePath;
+      } else if (imagePath) {
+        // Update to legacy single image mode
         post.imagePath = imagePath.trim();
+        post.media = null;
       }
 
       if (legenda !== undefined) {
@@ -600,9 +620,15 @@ export class AdminController {
         });
       }
 
-      // Deletar o arquivo físico antes de deletar o post do banco
-      if (post.imagePath) {
-        const uploadService = new UploadService();
+      // Deletar os arquivos físicos antes de deletar o post do banco
+      const uploadService = new UploadService();
+      
+      if (post.media && post.media.length > 0) {
+        // Delete all carousel files
+        const filePaths = post.media.map(m => m.filePath);
+        await uploadService.deleteMultipleFiles(filePaths);
+      } else if (post.imagePath) {
+        // Delete legacy single file
         await uploadService.deleteFile(post.imagePath);
       }
 

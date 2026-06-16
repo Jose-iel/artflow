@@ -4,6 +4,7 @@ import { Cliente } from '../../entities/Cliente';
 import { UserRole } from '../../entities/User';
 import { Post, PostStatus } from '../../entities/Post';
 import { AuthRequest } from '../../middlewares/auth';
+import { UploadService } from '../../services/upload.service';
 import bcrypt from 'bcrypt';
 
 // Mock dependencies
@@ -380,6 +381,53 @@ describe('AdminController', () => {
         message: 'Cliente não encontrado ou inativo'
       });
     });
+
+    it('should create a carousel post and set imagePath to the first media item', async () => {
+      const media = [
+        { filePath: 'empresa-1/client-1/images/a.jpg', mimeType: 'image/jpeg', order: 0 },
+        { filePath: 'empresa-1/client-1/images/b.png', mimeType: 'image/png', order: 1 }
+      ];
+      mockRequest.body = {
+        clienteId: 'client-id',
+        media,
+        legenda: 'Carousel post'
+      };
+
+      const client = {
+        id: 'client-id',
+        ativo: true,
+        squadId: 'client-squad-id'
+      };
+
+      mockClienteRepository.findOne.mockResolvedValue(client);
+      mockPostRepository.create.mockImplementation((data: Partial<Post>) => data);
+      mockPostRepository.save.mockResolvedValue({ id: 'post-id', media });
+
+      await adminController.createPostForClient(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockPostRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          media,
+          imagePath: 'empresa-1/client-1/images/a.jpg'
+        })
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+    });
+
+    it('should return error when neither imagePath nor media is provided', async () => {
+      mockRequest.body = {
+        clienteId: 'client-id',
+        legenda: 'No media'
+      };
+
+      await adminController.createPostForClient(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Caminho da imagem ou media carousel é obrigatório'
+      });
+    });
   });
 
   describe('getDashboardPosts', () => {
@@ -622,6 +670,35 @@ describe('AdminController', () => {
       });
     });
 
+    it('should update post to carousel mode and set imagePath to the first media item', async () => {
+      const media = [
+        { filePath: 'empresa-1/client-1/images/x.jpg', mimeType: 'image/jpeg', order: 0 },
+        { filePath: 'empresa-1/client-1/images/y.mp4', mimeType: 'video/mp4', order: 1 }
+      ];
+      mockRequest.params = { id: 'post-1' };
+      mockRequest.body = { media };
+
+      const post = {
+        id: 'post-1',
+        imagePath: 'empresa-1/client-1/images/old.jpg',
+        media: null,
+        cliente: { nome: 'Cliente' },
+        createdBy: null
+      };
+
+      mockPostRepository.findOne.mockResolvedValue(post);
+      mockPostRepository.save.mockImplementation((p: Partial<Post>) => Promise.resolve(p));
+
+      await adminController.updatePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(mockPostRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          media,
+          imagePath: 'empresa-1/client-1/images/x.jpg'
+        })
+      );
+    });
+
     it('should return 404 when post not found', async () => {
       mockRequest.params = { id: 'nonexistent' };
       mockRequest.body = { legenda: 'Updated' };
@@ -657,6 +734,38 @@ describe('AdminController', () => {
         status: 'success',
         message: 'Post deletado com sucesso'
       });
+    });
+
+    it('should delete all carousel files when deleting a carousel post', async () => {
+      const media = [
+        { filePath: 'empresa-1/client-1/images/a.jpg', mimeType: 'image/jpeg', order: 0 },
+        { filePath: 'empresa-1/client-1/images/b.png', mimeType: 'image/png', order: 1 }
+      ];
+      mockRequest.params = { id: 'post-1' };
+
+      const post = {
+        id: 'post-1',
+        media,
+        imagePath: 'empresa-1/client-1/images/a.jpg',
+        cliente: { nome: 'Cliente' }
+      };
+
+      mockPostRepository.findOne.mockResolvedValue(post);
+      mockPostRepository.delete.mockResolvedValue({ affected: 1 });
+
+      const deleteMultipleSpy = jest
+        .spyOn(UploadService.prototype, 'deleteMultipleFiles')
+        .mockResolvedValue(undefined);
+
+      await adminController.deletePost(mockRequest as AuthRequest, mockResponse);
+
+      expect(deleteMultipleSpy).toHaveBeenCalledWith([
+        'empresa-1/client-1/images/a.jpg',
+        'empresa-1/client-1/images/b.png'
+      ]);
+      expect(mockPostRepository.delete).toHaveBeenCalledWith('post-1');
+
+      deleteMultipleSpy.mockRestore();
     });
 
     it('should return 404 when post not found', async () => {

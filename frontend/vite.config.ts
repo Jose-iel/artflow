@@ -18,12 +18,12 @@ export default mergeConfig(
       host: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:3333',
+          target: process.env.DOCKER_ENV ? 'http://backend:3333' : 'http://localhost:3333',
           changeOrigin: true,
           secure: false,
         },
         '/uploads': {
-          target: 'http://localhost:3333',
+          target: process.env.DOCKER_ENV ? 'http://backend:3333' : 'http://localhost:3333',
           changeOrigin: true,
           secure: false,
         },

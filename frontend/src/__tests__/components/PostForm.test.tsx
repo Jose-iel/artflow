@@ -28,7 +28,7 @@ describe('PostForm Component', () => {
       render(<PostForm isFuncionario={true} funcionarioSquadId="squad-1" clients={mockClients} />)
 
       expect(screen.getByLabelText(/cliente/i)).toBeInTheDocument()
-      expect(screen.getByText(/arquivo de mídia/i)).toBeInTheDocument()
+      expect(screen.getByText(/mídias do post/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/legenda do post/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/data de agendamento/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/status do post/i)).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('PostForm Component', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/arquivo de mídia é obrigatório/i)).toBeInTheDocument()
+        expect(screen.getByText(/pelo menos uma mídia é obrigatória/i)).toBeInTheDocument()
       })
       expect(mockSubmit).not.toHaveBeenCalled()
     })
@@ -98,7 +98,7 @@ describe('PostForm Component', () => {
       const mockSubmit = vi.fn().mockResolvedValue(undefined)
       render(<PostForm onSubmit={mockSubmit} isFuncionario={true} clients={mockClients} />)
       
-      const fileUploadLabel = screen.getByText(/arquivo de mídia/i)
+      const fileUploadLabel = screen.getByText(/mídias do post/i)
       const clientSelect = screen.getByLabelText(/cliente/i)
       
       fireEvent.change(clientSelect, { target: { value: 'client-1' } })

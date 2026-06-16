@@ -1,5 +1,12 @@
+export interface MediaItem {
+  filePath: string;
+  mimeType: string;
+  order: number;
+}
+
 export class CreatePostDto {
-  imagePath: string;
+  imagePath?: string;
+  media?: MediaItem[];
   legenda?: string;
   dataAgendada?: string;
   clienteId?: string;
@@ -13,7 +20,8 @@ export class UpdatePostStatusDto {
 
 export class PostResponseDto {
   id: string;
-  imagePath: string;
+  imagePath: string | null;
+  media: MediaItem[] | null;
   legenda: string | null;
   dataAgendada: string | null;
   status: string;

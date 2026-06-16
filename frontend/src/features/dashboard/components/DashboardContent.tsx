@@ -3,9 +3,16 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiGet, apiPatch } from '@/services/api'
 import { PostModal } from '@/features/posts'
 
+interface MediaItem {
+  filePath: string
+  mimeType: string
+  order: number
+}
+
 interface Post {
   id: string
-  imagePath: string
+  imagePath: string | null
+  media: MediaItem[] | null
   legenda: string | null
   dataAgendada: string | null
   status: string
@@ -229,7 +236,11 @@ export const DashboardContent: React.FC = () => {
                             alt={post.legenda || 'Post image'}
                             className="w-full h-40 sm:h-48 object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagem+não+disponível'
+                              // Prevent infinite loop by checking if error was already handled
+                              if (e.currentTarget.dataset.errorHandled) return
+                              e.currentTarget.dataset.errorHandled = 'true'
+                              e.currentTarget.style.display = 'none'
+                              e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-40 sm:h-48 flex items-center justify-center bg-gray-200 text-gray-500 text-sm">Imagem não disponível</div>'
                             }}
                           />
                         )

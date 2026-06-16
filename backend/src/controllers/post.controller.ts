@@ -15,7 +15,8 @@ export class PostController {
   private mapPostToResponse(post: Post): PostResponseDto {
     return {
       id: post.id,
-      imagePath: post.imagePath,
+      imagePath: post.imagePath || null,
+      media: post.media || null,
       legenda: post.legenda || null,
       dataAgendada: post.dataAgendada ? post.dataAgendada.toISOString() : null,
       status: post.status,
@@ -154,7 +155,7 @@ export class PostController {
 
   async createPost(req: AuthenticatedRequest, res: Response) {
     try {
-      const { imagePath, legenda, dataAgendada, clienteId: formClienteId }: CreatePostDto = req.body;
+      const { imagePath, media, legenda, dataAgendada, clienteId: formClienteId }: CreatePostDto = req.body;
       
       // Determine clienteId based on user role
       let clienteId: string;
@@ -191,9 +192,9 @@ export class PostController {
         squadId = req.user!.squadId!;
       }
 
-      // Validation
-      if (!imagePath) {
-        throw new AppError('Caminho da imagem é obrigatório', 400);
+      // Validation: must have either imagePath or media
+      if (!imagePath && (!media || media.length === 0)) {
+        throw new AppError('Caminho da imagem ou media carousel é obrigatório', 400);
       }
 
       // Validate scheduled date if provided
@@ -204,17 +205,29 @@ export class PostController {
         }
       }
 
-      const newPost = {
+      // Build post data
+      const newPostData: Partial<Post> = {
         clienteId,
         squadId,
         createdById,
-        imagePath: imagePath,
         legenda: legenda || null,
         dataAgendada: dataAgendada ? new Date(dataAgendada) : null,
         status: PostStatus.NAO_APROVADO
       };
 
-      const savedPost = await this.postRepository.save(newPost);
+      // Support both legacy (imagePath) and carousel (media) modes
+      if (media && media.length > 0) {
+        // Carousel mode: use media array
+        newPostData.media = media;
+        // For backward compatibility, also set imagePath to first media item
+        newPostData.imagePath = media[0].filePath;
+      } else if (imagePath) {
+        // Legacy mode: single image
+        newPostData.imagePath = imagePath;
+        newPostData.media = null;
+      }
+
+      const savedPost = await this.postRepository.save(newPostData);
 
       res.status(201).json({
         message: 'Post criado com sucesso',

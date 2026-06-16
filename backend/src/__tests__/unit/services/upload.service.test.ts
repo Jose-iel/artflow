@@ -1,11 +1,16 @@
 import { UploadService } from '../../../services/upload.service'
 import { Request } from 'express'
+import { Formidable } from 'formidable'
 import fs from 'fs/promises'
 import path from 'path'
 import AppError from '../../../utils/AppError'
 
 // Mock formidable
 jest.mock('formidable')
+
+const MockedFormidable = Formidable as unknown as jest.Mock
+
+type ParseCallback = (err: Error | null, fields: unknown, files: unknown) => void
 
 describe('UploadService', () => {
   let service: UploadService
@@ -416,6 +421,146 @@ describe('UploadService', () => {
 
       // Tentar deletar novamente (segunda vez)
       await expect(service.deleteFile(testFilePath)).resolves.not.toThrow()
+    })
+  })
+
+  describe('handleMultipleUploads', () => {
+    // Helper: cria um objeto de arquivo no formato do formidable, dentro do uploadDir
+    const makeFile = (name: string, mimetype = 'image/jpeg') =>
+      ({
+        filepath: path.join(testDir, 'empresa-1', 'client-1', 'images', name),
+        originalFilename: name,
+        mimetype
+      } as never)
+
+    // Helper: faz o Formidable mockado chamar o callback do parse com os arquivos dados
+    const mockParseWith = (files: unknown, err: Error | null = null) => {
+      MockedFormidable.mockImplementation(() => ({
+        parse: (_req: unknown, cb: ParseCallback) => cb(err, {}, files)
+      }))
+    }
+
+    // Helper: faz as validações do validator passarem
+    const stubValidatorOk = () => {
+      jest.spyOn(service['validator'], 'validatePath').mockImplementation(() => undefined)
+      jest.spyOn(service['validator'], 'validateFileSize').mockResolvedValue(undefined)
+      jest.spyOn(service['validator'], 'validateFileType').mockResolvedValue(undefined)
+    }
+
+    it('should resolve with metadata for all valid files', async () => {
+      stubValidatorOk()
+      mockParseWith({ file: [makeFile('a.jpg'), makeFile('b.png', 'image/png')] })
+
+      const results = await service.handleMultipleUploads({} as Request)
+
+      expect(results).toHaveLength(2)
+      expect(results[0]).toEqual({
+        filePath: 'empresa-1/client-1/images/a.jpg',
+        fileName: 'a.jpg',
+        mimeType: 'image/jpeg'
+      })
+      expect(results[1]).toEqual({
+        filePath: 'empresa-1/client-1/images/b.png',
+        fileName: 'b.png',
+        mimeType: 'image/png'
+      })
+    })
+
+    it('should accept a single file sent as a non-array value', async () => {
+      stubValidatorOk()
+      mockParseWith({ file: makeFile('single.jpg') })
+
+      const results = await service.handleMultipleUploads({} as Request)
+
+      expect(results).toHaveLength(1)
+      expect(results[0].fileName).toBe('single.jpg')
+    })
+
+    it('should reject when no file is sent', async () => {
+      stubValidatorOk()
+      mockParseWith({})
+
+      await expect(service.handleMultipleUploads({} as Request)).rejects.toThrow(
+        'Nenhum arquivo foi enviado'
+      )
+    })
+
+    it('should reject when more than the max number of files is sent', async () => {
+      stubValidatorOk()
+      const tooMany = Array.from({ length: 11 }, (_, i) => makeFile(`f${i}.jpg`))
+      mockParseWith({ file: tooMany })
+
+      await expect(service.handleMultipleUploads({} as Request)).rejects.toThrow(
+        'Máximo de 10 arquivos permitidos'
+      )
+    })
+
+    it('should propagate formidable parse errors', async () => {
+      mockParseWith({}, new Error('parse failure'))
+
+      await expect(service.handleMultipleUploads({} as Request)).rejects.toThrow('parse failure')
+    })
+
+    it('should cleanup already-validated files and reject when one file fails validation', async () => {
+      jest.spyOn(service['validator'], 'validatePath').mockImplementation(() => undefined)
+      jest.spyOn(service['validator'], 'validateFileSize').mockResolvedValue(undefined)
+      // Falha apenas para o arquivo "bad"
+      jest
+        .spyOn(service['validator'], 'validateFileType')
+        .mockImplementation(async (filepath: string) => {
+          if (filepath.includes('bad')) {
+            throw new AppError('Tipo de arquivo não permitido', 400)
+          }
+        })
+
+      const deleteSpy = jest.spyOn(service, 'deleteFile').mockResolvedValue(undefined)
+      mockParseWith({ file: [makeFile('good.jpg'), makeFile('bad.jpg')] })
+
+      await expect(service.handleMultipleUploads({} as Request)).rejects.toThrow('Erros no upload')
+
+      // O arquivo válido já gravado deve ser removido no rollback
+      expect(deleteSpy).toHaveBeenCalledWith('empresa-1/client-1/images/good.jpg')
+    })
+  })
+
+  describe('deleteMultipleFiles', () => {
+    const createFile = async (relativePath: string) => {
+      const fullPath = path.join(testDir, relativePath)
+      await fs.mkdir(path.dirname(fullPath), { recursive: true })
+      await fs.writeFile(fullPath, 'content')
+      return fullPath
+    }
+
+    it('should delete all provided files', async () => {
+      const paths = [
+        'empresa-1/client-1/images/a.jpg',
+        'empresa-1/client-1/images/b.jpg',
+        'empresa-1/client-1/videos/c.mp4'
+      ]
+      const fullPaths = await Promise.all(paths.map(createFile))
+
+      await service.deleteMultipleFiles(paths)
+
+      for (const fullPath of fullPaths) {
+        await expect(fs.access(fullPath)).rejects.toThrow()
+      }
+    })
+
+    it('should resolve gracefully for an empty array', async () => {
+      await expect(service.deleteMultipleFiles([])).resolves.not.toThrow()
+    })
+
+    it('should handle a mix of existing and non-existent files', async () => {
+      const fullPath = await createFile('empresa-1/client-1/images/exists.jpg')
+
+      await expect(
+        service.deleteMultipleFiles([
+          'empresa-1/client-1/images/exists.jpg',
+          'empresa-1/client-1/images/missing.jpg'
+        ])
+      ).resolves.not.toThrow()
+
+      await expect(fs.access(fullPath)).rejects.toThrow()
     })
   })
 })

@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { apiPost } from '@/services/api'
 import { Lightbulb } from 'lucide-react'
-import { FileUpload } from '@/components/FileUpload'
+import { FileUpload, type UploadedFile, MediaCarousel } from '@/components'
+
+export interface MediaItem {
+  filePath: string
+  mimeType: string
+  order: number
+}
 
 export interface CreatePostData {
-  imagePath: string
+  id?: string
+  imagePath?: string
+  media?: MediaItem[]
   legenda: string | null
   dataAgendada: string | null
   clienteId?: string
@@ -46,7 +54,9 @@ interface PostFormProps {
 }
 
 interface FormErrors {
+  id?: string
   imagePath?: string
+  media?: string
   imagemUrl?: string
   legenda?: string
   dataAgendada?: string
@@ -74,6 +84,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>('')
   const [selectedSquadId, setSelectedSquadId] = useState<string>(funcionarioSquadId || '')
   const [formData, setFormData] = useState<CreatePostData>({
+    media: initialData?.media || [],
     imagePath: initialData?.imagePath || '',
     legenda: initialData?.legenda || '',
     dataAgendada: initialData?.dataAgendada || '',
@@ -90,6 +101,8 @@ export const PostForm: React.FC<PostFormProps> = ({
     isDriveFile: boolean
     useIframe: boolean
   } | null>(null)
+  
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
   const isAdmin = isAdminMaster || isFuncionario
 
@@ -133,6 +146,7 @@ export const PostForm: React.FC<PostFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setFormData({
+        media: initialData.media || [],
         imagePath: initialData.imagePath || '',
         legenda: initialData.legenda || '',
         dataAgendada: initialData.dataAgendada || '',
@@ -140,14 +154,29 @@ export const PostForm: React.FC<PostFormProps> = ({
         squadId: initialData.squadId || funcionarioSquadId || '',
         status: initialData.status || 'Não aprovado'
       })
+      
+      // Initialize uploadedFiles from initialData media
+      if (initialData.media && initialData.media.length > 0) {
+        const files: UploadedFile[] = initialData.media.map((m, index) => ({
+          filePath: m.filePath,
+          fileName: m.filePath.split('/').pop() || 'file',
+          url: `/uploads/${m.filePath}`,
+          mimeType: m.mimeType,
+          order: index
+        }))
+        setUploadedFiles(files)
+      }
     }
   }, [initialData, funcionarioSquadId])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.imagePath.trim()) {
-      newErrors.imagePath = 'O arquivo de mídia é obrigatório'
+    const hasMedia = formData.media && formData.media.length > 0
+    const hasImagePath = formData.imagePath && formData.imagePath.trim() !== ''
+    
+    if (!hasMedia && !hasImagePath) {
+      newErrors.media = 'Pelo menos uma mídia é obrigatória'
     }
 
     if (isAdminMaster) {
@@ -188,6 +217,7 @@ export const PostForm: React.FC<PostFormProps> = ({
       // Apenas garantir que o marcador #video está presente se necessário
       const submissionData: CreatePostData = {
         imagePath: formData.imagePath,
+        media: formData.media && formData.media.length > 0 ? formData.media : undefined,
         legenda: formData.legenda,
         dataAgendada: formData.dataAgendada ? `${formData.dataAgendada}:00-03:00` : null,
         clienteId: formData.clienteId,
@@ -348,30 +378,51 @@ export const PostForm: React.FC<PostFormProps> = ({
                   </div>
                 )}
 
-                {/* File Upload */}
+                {/* File Upload - Carousel */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Arquivo de Mídia (Imagem ou Vídeo) *
+                    Mídias do Post (Carousel) *
                   </label>
                   <FileUpload
                     clienteId={formData.clienteId}
-                    postId={(initialData as any)?.id}
-                    onFileUploaded={(fileData) => {
-                      setFormData(prev => ({ ...prev, imagePath: fileData.filePath }))
-                      // Limpar preview antigo se existir
-                      if (preview) URL.revokeObjectURL(preview.url)
-                      setPreview({
-                        url: fileData.url,
-                        isVideo: fileData.mimeType.startsWith('video/'),
-                        isDriveFile: false,
-                        useIframe: false
-                      })
+                    postId={initialData?.id}
+                    onFilesUploaded={(files) => {
+                      setUploadedFiles(files)
+                      const mediaItems: MediaItem[] = files.map((f, index) => ({
+                        filePath: f.filePath,
+                        mimeType: f.mimeType,
+                        order: index
+                      }))
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        media: mediaItems,
+                        imagePath: files[0]?.filePath || ''
+                      }))
                     }}
+                    onFileRemoved={(index) => {
+                      const newFiles = uploadedFiles.filter((_, i) => i !== index)
+                      setUploadedFiles(newFiles)
+                      const mediaItems: MediaItem[] = newFiles.map((f, i) => ({
+                        filePath: f.filePath,
+                        mimeType: f.mimeType,
+                        order: i
+                      }))
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        media: mediaItems,
+                        imagePath: newFiles[0]?.filePath || ''
+                      }))
+                    }}
+                    value={uploadedFiles}
+                    maxFiles={10}
                     className="mb-4"
                   />
-                  {errors.imagePath && (
-                    <p className="mt-1 text-sm text-red-600">{errors.imagePath}</p>
+                  {errors.media && (
+                    <p className="mt-1 text-sm text-red-600">{errors.media}</p>
                   )}
+                  <p className="text-xs text-gray-500">
+                    Você pode adicionar até 10 arquivos (imagens ou vídeos)
+                  </p>
                 </div>
 
                 {/* Caption */}
@@ -553,12 +604,38 @@ export const PostForm: React.FC<PostFormProps> = ({
                     </button>
                   </div>
                   
-                  {/* Post Image/Video */}
+                  {/* Post Image/Video/Carousel */}
                   <div className="bg-black" style={{ 
                     height: previewMode === 'story' ? '480px' : '480px',
                     aspectRatio: previewMode === 'story' ? '9/16' : '3/4'
                   }}>
-                    {preview ? (
+                    {uploadedFiles.length > 1 ? (
+                      // Carousel preview
+                      <MediaCarousel
+                        media={uploadedFiles.map(f => ({ url: f.url, mimeType: f.mimeType }))}
+                        aspectRatio={previewMode === 'story' ? '9:16' : '3:4'}
+                        showDots={true}
+                        showArrows={true}
+                      />
+                    ) : uploadedFiles.length === 1 ? (
+                      // Single file preview
+                      uploadedFiles[0].mimeType.startsWith('video/') ? (
+                        <video 
+                          src={uploadedFiles[0].url}
+                          className="w-full h-full object-cover"
+                          controls
+                          muted
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img 
+                          src={uploadedFiles[0].url}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      )
+                    ) : preview ? (
+                      // Legacy single preview (backward compatibility)
                       preview.isVideo ? (
                         <video 
                           src={preview.url}

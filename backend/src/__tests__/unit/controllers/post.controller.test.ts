@@ -262,7 +262,7 @@ describe('PostController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(201);
     });
 
-    it('should return 400 when imagePath is missing', async () => {
+    it('should return 400 when imagePath and media are missing', async () => {
       mockRequest.user = {
         id: 'client-id',
         role: UserRole.CLIENT,
@@ -277,7 +277,7 @@ describe('PostController', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'error',
-        message: 'Caminho da imagem é obrigatório'
+        message: 'Caminho da imagem ou media carousel é obrigatório'
       });
     });
 
@@ -299,6 +299,68 @@ describe('PostController', () => {
         status: 'error',
         message: 'Data agendada deve ser futura'
       });
+    });
+
+    it('should create a carousel post and set imagePath to the first media item', async () => {
+      mockRequest.user = {
+        id: 'client-id',
+        role: UserRole.CLIENT,
+        squadId: 'squad-1'
+      };
+      const media = [
+        { filePath: 'empresa-1/client-1/images/a.jpg', mimeType: 'image/jpeg', order: 0 },
+        { filePath: 'empresa-1/client-1/images/b.png', mimeType: 'image/png', order: 1 }
+      ];
+      mockRequest.body = { media, legenda: 'Carousel post' };
+
+      mockPostRepository.save.mockResolvedValue({
+        id: 'new-post-id',
+        clienteId: 'client-id',
+        squadId: 'squad-1',
+        media,
+        imagePath: media[0].filePath,
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      });
+
+      await postController.createPost(mockRequest, mockResponse);
+
+      expect(mockPostRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          media,
+          imagePath: 'empresa-1/client-1/images/a.jpg'
+        })
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+    });
+
+    it('should set media to null when only imagePath is provided (legacy mode)', async () => {
+      mockRequest.user = {
+        id: 'client-id',
+        role: UserRole.CLIENT,
+        squadId: 'squad-1'
+      };
+      mockRequest.body = { imagePath: 'empresa-1/client-1/images/legacy.jpg' };
+
+      mockPostRepository.save.mockResolvedValue({
+        id: 'new-post-id',
+        clienteId: 'client-id',
+        squadId: 'squad-1',
+        imagePath: 'empresa-1/client-1/images/legacy.jpg',
+        media: null,
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      });
+
+      await postController.createPost(mockRequest, mockResponse);
+
+      expect(mockPostRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imagePath: 'empresa-1/client-1/images/legacy.jpg',
+          media: null
+        })
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
     });
   });
 

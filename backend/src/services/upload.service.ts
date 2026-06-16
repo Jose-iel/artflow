@@ -1,10 +1,23 @@
 import { Formidable } from 'formidable'
 import path from 'path'
 import fs from 'fs/promises'
+import { mkdirSync } from 'fs'
 import { Request } from 'express'
 import { Fields, Files, File, Part } from 'formidable'
 import { FileValidatorService } from './file-validator.service'
 import AppError from '../utils/AppError'
+
+interface UploadRequestUser {
+  id?: string
+  empresaId?: string
+  squad?: { empresaId?: string }
+}
+
+export interface UploadResult {
+  filePath: string
+  fileName: string
+  mimeType: string
+}
 
 export class UploadService {
   private uploadDir: string
@@ -17,57 +30,96 @@ export class UploadService {
     this.validator = new FileValidatorService()
   }
 
-  async handleUpload(req: Request): Promise<{ filePath: string; fileName: string; mimeType: string }> {
-    const form = new Formidable({
+  /**
+   * Cria uma instância configurada do Formidable, compartilhada entre
+   * upload simples e múltiplo. O callback `filename` resolve empresa/cliente/post
+   * a partir do request, sanitiza os componentes e cria o diretório de destino.
+   * @param maxFiles - Limite opcional de arquivos (usado no upload de carrossel)
+   */
+  private createForm(maxFiles?: number): InstanceType<typeof Formidable> {
+    return new Formidable({
       uploadDir: this.uploadDir,
       keepExtensions: true,
       maxFileSize: this.maxFileSize,
-      filter: function (part: Part): boolean {
+      ...(maxFiles ? { maxFiles } : {}),
+      filter: (part: Part): boolean => {
         return !!(part.mimetype?.startsWith('image/') || part.mimetype?.startsWith('video/'))
       },
-      filename: (name: string, ext: string, part: Part, form: any) => {
-        const request = form.req as Request
-        const rawEmpresaId = (request as any).user?.empresaId || (request as any).user?.squad?.empresaId
-        
+      filename: (_name: string, ext: string, part: Part, form: InstanceType<typeof Formidable>): string => {
+        // O request só fica disponível no Formidable durante o parse
+        const request = (form as unknown as { req: Request & { user?: UploadRequestUser } }).req
+
+        const rawEmpresaId = request.user?.empresaId || request.user?.squad?.empresaId
+
         // Pegar clienteId de query params ou headers (body não está disponível aqui)
-        const rawClienteId = (request as any).query?.clienteId || 
-                             (request as any).headers['x-cliente-id'] || 
-                             (request as any).user?.id
-        
-        const rawPostId = (request as any).query?.postId || 
-                          (request as any).headers['x-post-id']
-        
+        const rawClienteId =
+          (request.query.clienteId as string) ||
+          (request.headers['x-cliente-id'] as string) ||
+          request.user?.id
+
+        const rawPostId =
+          (request.query.postId as string) ||
+          (request.headers['x-post-id'] as string)
+
         // Sanitizar paths para prevenir path traversal
-        const empresaId = this.validator.sanitizePathComponent(rawEmpresaId, 'default')
-        const clienteId = this.validator.sanitizePathComponent(rawClienteId, 'anonymous')
-        const postId = this.validator.sanitizePathComponent(rawPostId, 'temp')
-        
+        const empresaId = this.validator.sanitizePathComponent(rawEmpresaId as string, 'default')
+        const clienteId = this.validator.sanitizePathComponent(rawClienteId as string, 'anonymous')
+        const postId = this.validator.sanitizePathComponent(rawPostId as string, 'temp')
+
         const fileType = part.mimetype?.startsWith('image/') ? 'images' : 'videos'
-        
+
         const timestamp = Date.now()
+        const randomSuffix = Math.random().toString(36).substring(2, 8)
         // Remover TODOS os caracteres especiais, incluindo pontos
         const sanitizedName = part.originalFilename?.replace(/[^a-zA-Z0-9]/g, '_') || 'file'
-        const uniqueName = `${postId}_${timestamp}_${sanitizedName}${ext}`
-        
+        const uniqueName = `${postId}_${timestamp}_${randomSuffix}_${sanitizedName}${ext}`
+
         // Criar diretório apenas quando necessário
         const dirPath = path.join(this.uploadDir, empresaId, clienteId, fileType)
-        try {
-          require('fs').mkdirSync(dirPath, { recursive: true })
-        } catch (error) {
-          // Directory already exists
-        }
-        
+        mkdirSync(dirPath, { recursive: true })
+
         return `${empresaId}/${clienteId}/${fileType}/${uniqueName}`
       }
     })
+  }
+
+  /**
+   * Valida um arquivo já recebido (path traversal, tamanho e magic bytes)
+   * e retorna seus metadados relativos. Lança AppError em caso de falha;
+   * o arquivo inválido já é removido pelo validator.
+   */
+  private async validateUploadedFile(file: File): Promise<UploadResult> {
+    // SEGURANÇA: Validar path para prevenir path traversal
+    const absoluteUploadDir = path.resolve(this.uploadDir)
+    const absoluteFilePath = path.resolve(file.filepath)
+    this.validator.validatePath(absoluteFilePath, absoluteUploadDir)
+
+    // SEGURANÇA: Validar tamanho real do arquivo
+    await this.validator.validateFileSize(file.filepath)
+
+    // SEGURANÇA: Validar tipo de arquivo através de magic bytes
+    await this.validator.validateFileType(file.filepath, file.mimetype || '')
+
+    // Remove o caminho absoluto do uploadDir para retornar apenas o caminho relativo
+    const relativePath = file.filepath.replace(absoluteUploadDir + '/', '')
+
+    return {
+      filePath: relativePath,
+      fileName: file.originalFilename || 'unknown',
+      mimeType: file.mimetype || 'application/octet-stream'
+    }
+  }
+
+  async handleUpload(req: Request): Promise<UploadResult> {
+    const form = this.createForm()
 
     return new Promise((resolve, reject) => {
-      form.parse(req, async (err: any, fields: Fields<string>, files: Files<string>) => {
+      form.parse(req, async (err: Error | null, _fields: Fields<string>, files: Files<string>) => {
         if (err) {
           reject(err)
           return
         }
-        
+
         const file = Array.isArray(files.file) ? files.file[0] : files.file
         if (!file) {
           reject(new AppError('Nenhum arquivo foi enviado', 400))
@@ -75,31 +127,88 @@ export class UploadService {
         }
 
         try {
-          // SEGURANÇA: Validar path para prevenir path traversal
-          const absoluteUploadDir = path.resolve(this.uploadDir)
-          const absoluteFilePath = path.resolve(file.filepath)
-          this.validator.validatePath(absoluteFilePath, absoluteUploadDir)
-
-          // SEGURANÇA: Validar tamanho real do arquivo
-          await this.validator.validateFileSize(file.filepath)
-
-          // SEGURANÇA: Validar tipo de arquivo através de magic bytes
-          await this.validator.validateFileType(file.filepath, file.mimetype || '')
-
-          // Remove o caminho absoluto do uploadDir para retornar apenas o caminho relativo
-          const relativePath = file.filepath.replace(absoluteUploadDir + '/', '')
-          
-          resolve({
-            filePath: relativePath,
-            fileName: file.originalFilename || 'unknown',
-            mimeType: file.mimetype || 'application/octet-stream'
-          })
+          resolve(await this.validateUploadedFile(file))
         } catch (error) {
           // Se houver erro na validação, o arquivo já foi deletado pelo validator
           reject(error)
         }
       })
     })
+  }
+
+  /**
+   * Handle multiple file uploads for carousel support
+   * @param req - Express request object
+   * @returns Promise<UploadResult[]>
+   */
+  async handleMultipleUploads(req: Request): Promise<UploadResult[]> {
+    const maxFiles = 10 // Maximum files per carousel (Instagram limit)
+    const form = this.createForm(maxFiles)
+
+    return new Promise((resolve, reject) => {
+      form.parse(req, async (err: Error | null, _fields: Fields<string>, files: Files<string>) => {
+        if (err) {
+          reject(err)
+          return
+        }
+
+        // Get all files from the request
+        let uploadedFiles: File[] = []
+        if (files.file) {
+          uploadedFiles = Array.isArray(files.file) ? files.file : [files.file]
+        }
+
+        if (uploadedFiles.length === 0) {
+          reject(new AppError('Nenhum arquivo foi enviado', 400))
+          return
+        }
+
+        if (uploadedFiles.length > maxFiles) {
+          reject(new AppError(`Máximo de ${maxFiles} arquivos permitidos`, 400))
+          return
+        }
+
+        const results: UploadResult[] = []
+        const errors: string[] = []
+
+        // Process each file
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          try {
+            results.push(await this.validateUploadedFile(uploadedFiles[i]))
+          } catch (error) {
+            // Collect errors but continue processing other files
+            errors.push(`Arquivo ${i + 1}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+          }
+        }
+
+        // If any validation failed, cleanup uploaded files and reject
+        if (errors.length > 0) {
+          // Cleanup successfully uploaded files
+          for (const result of results) {
+            try {
+              await this.deleteFile(result.filePath)
+            } catch {
+              // Ignore cleanup errors
+            }
+          }
+          reject(new AppError(`Erros no upload:\n${errors.join('\n')}`, 400))
+          return
+        }
+
+        resolve(results)
+      })
+    })
+  }
+
+  /**
+   * Delete multiple files from filesystem
+   * @param filePaths - Array of relative file paths
+   * @returns Promise<void>
+   */
+  async deleteMultipleFiles(filePaths: string[]): Promise<void> {
+    for (const filePath of filePaths) {
+      await this.deleteFile(filePath)
+    }
   }
 
   /**

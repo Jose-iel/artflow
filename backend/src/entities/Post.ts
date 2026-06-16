@@ -27,8 +27,15 @@ export class Post {
   @Column({ name: 'data_agendada', type: 'timestamp with time zone', nullable: true })
   dataAgendada: Date | null;
 
-  @Column({ name: 'image_path', type: 'text' })
-  imagePath: string;
+  @Column({ name: 'image_path', type: 'text', nullable: true })
+  imagePath: string | null;
+
+  @Column({ name: 'media', type: 'jsonb', nullable: true })
+  media: Array<{
+    filePath: string;
+    mimeType: string;
+    order: number;
+  }> | null;
 
   @Column({ name: 'legenda', type: 'text', nullable: true })
   legenda: string | null;

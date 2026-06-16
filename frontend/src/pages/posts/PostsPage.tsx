@@ -4,10 +4,18 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { TruncateText } from '@/components'
+import { RectangleStackIcon } from '@heroicons/react/24/outline'
+
+interface MediaItem {
+  filePath: string
+  mimeType: string
+  order: number
+}
 
 interface Post {
   id: string
-  imagePath: string
+  imagePath: string | null
+  media: MediaItem[] | null
   legenda: string | null
   dataAgendada: string | null
   status: string
@@ -357,7 +365,7 @@ export const PostsPage: React.FC = () => {
                     {isFuncionario && (
                       <td className="px-6 py-4">
                         <div
-                          className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                          className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity relative"
                           onClick={() => navigate(`/posts/edit/${post.id}`)}
                         >
                           {post.imagePath ? (
@@ -381,6 +389,14 @@ export const PostsPage: React.FC = () => {
                           ) : (
                             <div className="h-16 w-16 flex items-center justify-center text-gray-400 text-xs">
                               Sem img
+                            </div>
+                          )}
+                          
+                          {/* Carousel indicator */}
+                          {post.media && post.media.length > 1 && (
+                            <div className="absolute top-0 right-0 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-bl flex items-center gap-0.5">
+                              <RectangleStackIcon className="w-3 h-3" />
+                              {post.media.length}
                             </div>
                           )}
                         </div>

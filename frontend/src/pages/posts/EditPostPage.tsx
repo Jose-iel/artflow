@@ -5,9 +5,16 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiGet, apiPut, apiDelete } from '@/services/api'
 import { UserRole } from '@/types/auth'
 
+interface MediaItem {
+  filePath: string
+  mimeType: string
+  order: number
+}
+
 interface Post {
   id: string
-  imagePath: string
+  imagePath: string | null
+  media: MediaItem[] | null
   legenda: string | null
   dataAgendada: string | null
   clienteId: string
@@ -128,7 +135,9 @@ export const EditPostPage: React.FC = () => {
 
   // Convert post data to form format
   const initialData: CreatePostData = {
-    imagePath: post.imagePath,
+    id: post.id,
+    imagePath: post.imagePath || '',
+    media: post.media || [],
     legenda: post.legenda,
     dataAgendada: post.dataAgendada ? convertToDateTimeLocal(post.dataAgendada) : '',
     clienteId: post.clienteId,

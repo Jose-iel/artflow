@@ -1,11 +1,19 @@
 import React, { useState } from 'react'
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { MediaCarousel } from '@/components'
+
+interface MediaItem {
+  filePath: string
+  mimeType: string
+  order: number
+}
 
 interface PostModalProps {
   post: {
     id: string
-    imagePath: string
+    imagePath: string | null
+    media?: MediaItem[] | null
     legenda: string | null
     dataAgendada: string | null
     status: string
@@ -99,11 +107,11 @@ export const PostModal: React.FC<PostModalProps> = ({
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       {/* Full-screen container to center the panel */}
-      <div className="fixed inset-0 flex items-start justify-center p-4 pt-8">
+      <div className="fixed inset-0 flex items-start justify-center overflow-hidden">
         {/* The actual modal panel */}
-        <Dialog.Panel className="mx-auto max-w-6xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh]">
+        <Dialog.Panel className="w-screen h-full bg-white shadow-2xl overflow-hidden lg:mx-auto lg:max-w-6xl lg:w-full lg:rounded-2xl lg:max-h-[90vh] lg:my-8">
           {/* Mobile Layout - Stacked */}
-          <div className="lg:hidden flex flex-col h-[90vh] max-h-[800px]">
+          <div className="lg:hidden flex flex-col h-full w-full overflow-x-hidden">
             {/* Mobile Header */}
             <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between flex-shrink-0">
               <Dialog.Title className="text-lg font-semibold text-gray-900">
@@ -118,10 +126,10 @@ export const PostModal: React.FC<PostModalProps> = ({
             </div>
             
             {/* Mobile Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
               {/* Mobile Post Preview */}
-              <div className="bg-gray-50 p-4">
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="bg-gray-50">
+                <div className="bg-white shadow-sm overflow-hidden w-full" style={{ maxWidth: '100%' }}>
                   {/* Mobile Instagram Header */}
                   <div className="bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -135,9 +143,19 @@ export const PostModal: React.FC<PostModalProps> = ({
                     </button>
                   </div>
                   
-                  {/* Mobile Post Image - Feed 3:4 (1080x1440) */}
-                  <div className="bg-black" style={{ aspectRatio: '3/4' }}>
-                    {post.imagePath ? (
+                  {/* Mobile Post Media - Feed 3:4 (1080x1440) */}
+                  <div className="bg-black w-full overflow-hidden" style={{ aspectRatio: '3/4', maxWidth: '100vw' }}>
+                    {post.media && post.media.length > 0 ? (
+                      // Carousel display (even with 1 item)
+                      <MediaCarousel
+                        media={post.media.map(m => ({ url: `/uploads/${m.filePath}`, mimeType: m.mimeType }))}
+                        aspectRatio="3:4"
+                        showDots={post.media.length > 1}
+                        showArrows={post.media.length > 1}
+                        className="h-full"
+                      />
+                    ) : post.imagePath ? (
+                      // Single media (legacy)
                       post.imagePath.match(/\.(mp4|mov|avi|webm)$/i) ? (
                         <video 
                           src={`/uploads/${post.imagePath}`}
@@ -340,7 +358,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                 <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
                 
                 {/* Phone Screen */}
-                <div className="rounded-[2rem] overflow-hidden h-full bg-white flex flex-col">
+                <div className="rounded-[2rem] overflow-hidden overflow-x-hidden h-full bg-white flex flex-col" style={{ maxWidth: '100%' }}>
                   {/* Instagram Header */}
                   <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
                     <div className="flex items-center space-x-3">
@@ -355,10 +373,20 @@ export const PostModal: React.FC<PostModalProps> = ({
                   </div>
                   
                   {/* Scrollable Content Area */}
-                  <div className="flex-1 overflow-y-auto">
-                    {/* Post Image - Feed 3:4 (1080x1440) */}
-                    <div className="bg-black" style={{ aspectRatio: '3/4' }}>
-                      {post.imagePath ? (
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                    {/* Post Media - Feed 3:4 (1080x1440) */}
+                    <div className="bg-black w-full" style={{ aspectRatio: '3/4' }}>
+                      {post.media && post.media.length > 0 ? (
+                        // Carousel display (even with 1 item)
+                        <MediaCarousel
+                          media={post.media.map(m => ({ url: `/uploads/${m.filePath}`, mimeType: m.mimeType }))}
+                          aspectRatio="3:4"
+                          showDots={post.media.length > 1}
+                          showArrows={post.media.length > 1}
+                          className="h-full"
+                        />
+                      ) : post.imagePath ? (
+                        // Single media (legacy)
                         post.imagePath.match(/\.(mp4|mov|avi|webm)$/i) ? (
                           <video 
                             src={`/uploads/${post.imagePath}`}
